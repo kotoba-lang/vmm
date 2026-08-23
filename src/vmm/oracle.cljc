@@ -1,0 +1,70 @@
+(ns vmm.oracle
+  "Load the precompiled Kotoba KIR artifacts and execute their exports.
+
+  The `.kotoba` source under `kotoba/` is the authority. This namespace is the
+  call path: it never re-implements a decision, so there is no second copy to
+  drift. A host that wants a decision asks here."
+  (:require [clojure.edn :as edn]
+            [kotoba.kir :as ir]
+            #?(:clj [clojure.java.io :as io])))
+
+(def catalog
+  "Oracle id → classpath resource path."
+  {:arm64-boot "vmm/oracle/arm64_boot_core.kir.edn"
+   :exit "vmm/oracle/exit_core.kir.edn"})
+
+(def ^:private kir-cache (atom {}))
+(def ^:private resource-loader (atom nil))
+
+(defn set-resource-loader!
+  "Install `(fn [classpath-path] -> string|nil)` for hosts without classpath
+  io (cljs/nbb). Returns the previous loader."
+  [f]
+  (let [prev @resource-loader] (reset! resource-loader f) prev))
+
+(defn register-kir!
+  "Inject already-parsed KIR for `id` (bundlers, tests). Returns the KIR."
+  [id kir]
+  (swap! kir-cache assoc id kir)
+  kir)
+
+(defn- read-resource [path]
+  (if-let [f @resource-loader]
+    (f path)
+    #?(:clj (some-> (io/resource path) slurp)
+       :cljs nil)))
+
+(defn kir
+  "The KIR document for `id`. Throws if the artifact is absent -- a missing
+  artifact is not an empty decision, and must not be reported as one."
+  [id]
+  (or (get @kir-cache id)
+      (let [path (or (get catalog id)
+                     (throw (ex-info "unknown oracle id" {:id id :known (set (keys catalog))})))
+            src (or (read-resource path)
+                    (throw (ex-info "oracle artifact not on the classpath"
+                                    {:id id :path path})))]
+        (register-kir! id (edn/read-string src)))))
+
+(defn call
+  "Execute export `f` of oracle `id` with `args`."
+  [id f args]
+  (ir/execute (kir id) (symbol (name f)) (vec args)))
+
+(defn result
+  "Normalise a core's `[:result T E]` return -- the interpreter yields
+  `[ok? payload]` -- into `{:ok? bool :value v}` or `{:ok? false :reason s}`.
+
+  A shape this does not recognise is an error, not a rejection: reporting
+  \"could not read the answer\" as \"refused\" would make an unreadable
+  decision indistinguishable from a decided one."
+  [r]
+  (if (and (vector? r) (= 2 (count r)))
+    (let [[ok? v] r]
+      (if ok? {:ok? true :value v} {:ok? false :reason v}))
+    (throw (ex-info "not a [:result T E] value" {:got r}))))
+
+(defn call-result
+  "`call` plus `result`."
+  [id f args]
+  (result (call id f args)))
