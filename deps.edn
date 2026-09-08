@@ -5,7 +5,12 @@
 ;; executes it. Amu is :test-only -- it is needed to REGENERATE the artifacts
 ;; and to prove the shipped ones still match their source, never to run them.
 {:paths ["src" "resources"]
- :deps {org.clojure/clojure {:mvn/version "1.12.0"}
+ :deps {
+        ;; kotoba.lang.text, not clojure.string. Pinned as an explicit floor:
+        ;; tools.deps takes the NEWEST sha it is shown, so without a floor here
+        ;; this repo silently rides whatever a sibling happens to name.
+        io.github.kotoba-lang/text {:git/sha "73bdb13ae7a3d004b44bca08be03a3191157a38f"}
+       org.clojure/clojure {:mvn/version "1.12.0"}
         io.github.kotoba-lang/osaho
         {:git/url "https://github.com/kotoba-lang/osaho.git"
          :git/sha "6d08e3cffa09c003f8dbcdfaee964c4a1ea021ad"}}
