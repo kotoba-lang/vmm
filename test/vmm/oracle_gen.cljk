@@ -1,6 +1,6 @@
 ;; vmm.oracle-gen — regenerate the precompiled KIR artifacts.
 ;;
-;;   clojure -M:test:gen
+;;   kbb -M:test:gen
 ;;
 ;; Discovers every kotoba/*_core.kotoba and writes
 ;; resources/vmm/oracle/<name>.kir.edn through the same compile path the
