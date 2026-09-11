@@ -20,7 +20,7 @@
 ;; discovery: nothing here probes hardware.
 ;;
 ;; Host call path: vmm.exit/classify-mmio, vmm.exit/psci-action.
-;; Gate: test/vmm/exit_test.clj
+;; Gate: test/vmm/exit_test.cljk
 
 (defn uart-base [] :i64 150994944)      ;; 0x0900_0000, PL011
 (defn uart-size [] :i64 4096)           ;; 0x1000
