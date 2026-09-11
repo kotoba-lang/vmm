@@ -28,7 +28,7 @@
    :main-opts ["-m" "cognitect.test-runner"]}
 
   ;; Regenerate resources/vmm/oracle/*.kir.edn from kotoba/*_core.kotoba:
-  ;;   clojure -M:test:gen
+  ;;   kbb -M:test:gen
   ;; (a later alias's :main-opts wins; command-line -m would be appended to
   ;; the test runner's instead of replacing it)
   :gen {:main-opts ["-m" "vmm.oracle-gen"]}}}

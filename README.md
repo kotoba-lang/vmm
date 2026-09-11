@@ -31,7 +31,7 @@ they are what lives here -- as `.kotoba`, compiled by amu, shipped as KIR.
 
 ```
 kotoba/*_core.kotoba          the authority. Decisions, no I/O
-  -> amu (clojure -M:test:gen)
+  -> amu (kbb -M:test:gen)
 resources/vmm/oracle/*.kir.edn  what ships
   -> kotoba.kir
 src/vmm/*.cljc                the call path. Threads values, decides nothing
@@ -87,8 +87,8 @@ widening what is admitted.
 ## Build and check
 
 ```bash
-clojure -M:test          # 12 tests, 64 assertions
-clojure -M:test:gen      # regenerate resources/vmm/oracle/*.kir.edn from kotoba/
+kbb -M:test          # 12 tests, 64 assertions
+kbb -M:test:gen      # regenerate resources/vmm/oracle/*.kir.edn from kotoba/
 ```
 
 `vmm.kir-freshness-test` recompiles every `kotoba/*_core.kotoba` and compares
