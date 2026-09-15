@@ -15,8 +15,8 @@
   ;; Evidence floor: a catalog that discovers nothing must not pass as
   ;; "nothing stale".
   (let [sources (gen/artifacts)]
-    (is (= 2 (count sources))
-        "expected exactly the two cores; update this number deliberately")
+    (is (= 3 (count sources))
+        "expected exactly the three cores (arm64-boot, exit, tee); update this number deliberately")
     (is (= (set (map :out sources))
            (set (map #(str "resources/" %) (vals oracle/catalog))))
         "every kotoba/*_core.kotoba is in the oracle catalog and vice versa")))
