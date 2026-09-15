@@ -1,0 +1,149 @@
+(ns vmm.tee-test
+  "The TDX and SEV-SNP launch decisions, and every reason they refuse.
+
+  Expected verdicts are computed by hand from the TDX module spec and
+  AMD 24593, not by calling the code under test. Each negative case pins
+  the reason literal: a test that only asserts `:ok? false` passes when
+  the admission fails for a different reason than the one it claims to
+  be about."
+  (:require [clojure.test :refer [deftest is testing]]
+            [vmm.tee :as tee]))
+
+;; ---------------------------------------------------------------------------
+;; TDX launch
+
+(def tdx-good
+  {:kvm-tdx-ok 1 :tdvf-present 1 :cpu-leaf-21 1 :adapter-bit 1})
+
+(deftest admits-a-complete-tdx-platform
+  (let [d (tee/tdx-launch tdx-good)]
+    (is (:ok? d))
+    (is (:admit? d))
+    (is (:tdvf? d))))
+
+(deftest refuses-tdx-by-name
+  (testing "KVM without the TDX module cannot fabricate leaf 0x21"
+    (is (= "tdx/kvm-capabilities-absent"
+           (:reason (tee/tdx-launch (assoc tdx-good :kvm-tdx-ok 0))))))
+  (testing "TDVF is the only firmware shape that makes TDVMCALLs"
+    (is (= "tdx/tdvf-image-absent"
+           (:reason (tee/tdx-launch (assoc tdx-good :tdvf-present 0))))))
+  (testing "the guest's own detection depends on leaf 0x21"
+    (is (= "tdx/cpuid-leaf-21-not-virtualised"
+           (:reason (tee/tdx-launch (assoc tdx-good :cpu-leaf-21 0))))))
+  (testing "indirect CPUID needs the adapter bit"
+    (is (= "tdx/cpuid-indirect-adapter-absent"
+           (:reason (tee/tdx-launch (assoc tdx-good :adapter-bit 0)))))))
+
+;; ---------------------------------------------------------------------------
+;; SEV-SNP launch
+
+(def snp-good
+  {:kvm-snp-ok 1 :ovmf-present 1 :cpu-sev-bit 1 :snp-bit 1 :policy 256})
+
+(deftest admits-a-complete-snp-platform
+  (let [d (tee/snp-launch snp-good)]
+    (is (:ok? d))
+    (is (:admit? d))
+    (is (:ovmf? d))))
+
+(deftest refuses-snp-by-name
+  (testing "KVM without SNP capability"
+    (is (= "snp/kvm-capabilities-absent"
+           (:reason (tee/snp-launch (assoc snp-good :kvm-snp-ok 0))))))
+  (testing "AmdSev OVMF is the firmware that issues VMGEXIT"
+    (is (= "snp/ovmf-amdsev-absent"
+           (:reason (tee/snp-launch (assoc snp-good :ovmf-present 0))))))
+  (testing "the guest discovers SEV through CPUID 0x8000001F.EAX bit 1"
+    (is (= "snp/cpuid-sev-bit-not-virtualised"
+           (:reason (tee/snp-launch (assoc snp-good :cpu-sev-bit 0))))))
+  (testing "and SNP through bit 2"
+    (is (= "snp/cpuid-snp-bit-not-virtualised"
+           (:reason (tee/snp-launch (assoc snp-good :snp-bit 0)))))))
+
+(deftest refuses-snp-policy-bits-outside-the-mask
+  ;; SMT=8 | single-socket=0 | vmgexit=0 -> 256 is legal. A policy with a
+  ;; bit the firmware will not honour (e.g. 1) is refused, never passed
+  ;; through to the ioctl.
+  (is (:ok? (tee/snp-launch snp-good)))
+  (is (= "snp/policy-bits-outside-mask"
+         (:reason (tee/snp-launch (assoc snp-good :policy 1)))))
+  ;; policy 0 is LEGAL, not refused: SNP_LAUNCH_START with all optional
+  ;; bits clear (SMT off, single-socket off, no VMGEXIT) is the default
+  ;; launch. Refusing it would break the launch the firmware accepts.
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy 0))))
+  ;; a word with a genuinely invented bit (SMT bit + a bogus 2^40) is
+  ;; refused by name.
+  (is (= "snp/policy-bits-outside-mask"
+         (:reason (tee/snp-launch (assoc snp-good :policy (+ 8 1099511627776)))))))
+
+;; ---------------------------------------------------------------------------
+;; Launch variant
+
+(deftest names-the-variant
+  (is (= :tdx (:variant (tee/launch-variant 1))))
+  (is (= :snp (:variant (tee/launch-variant 2))))
+  (is (= "launch/unknown-variant" (:reason (tee/launch-variant 0))))
+  (is (= "launch/unknown-variant" (:reason (tee/launch-variant 3)))))
+
+;; ---------------------------------------------------------------------------
+;; Post-boot hypercalls
+
+(deftest maps-tdvmcall-reasons
+  (is (= :map-gpa (:action (tee/tdvmcall 1))))
+  (is (= :io (:action (tee/tdvmcall 2))))
+  (is (= :get-quote (:action (tee/tdvmcall 3))))
+  (is (= :setup-event-notify (:action (tee/tdvmcall 4))))
+  (testing "an unknown reason is refused, never guessed"
+    (is (= "tdvmcall/unknown-reason" (:reason (tee/tdvmcall 0))))
+    (is (= "tdvmcall/unknown-reason" (:reason (tee/tdvmcall 5))))))
+
+(deftest map-gpa-decides-the-half
+  (testing "aligned private conversion"
+    (let [d (tee/map-gpa 0x1000 0x1000)]
+      (is (:ok? d))
+      (is (= 1 (:value d)))))
+  (testing "bit 48 set means the guest wants the shared half"
+    (let [d (tee/map-gpa (+ 0x1000 281474976710656) 0x1000)]
+      (is (:ok? d))
+      (is (= 2 (:value d)))))
+  (testing "an unaligned GPA is refused"
+    (is (= "tdvmcall/map-gpa-unaligned" (:reason (tee/map-gpa 0x1001 0x1000)))))
+  (testing "an unaligned size is refused"
+    (is (= "tdvmcall/map-gpa-size-unaligned" (:reason (tee/map-gpa 0x1000 4097)))))
+  (testing "an empty range is refused"
+    (is (= "tdvmcall/map-gpa-empty" (:reason (tee/map-gpa 0x1000 0))))))
+
+(deftest psc-errors-refuse-by-name
+  (is (= :none (:err (tee/psc-err 0))))
+  (is (= :snp/psc-not-page-aligned (:err (tee/psc-err 2))))
+  (is (= :snp/psc-not-shared (:err (tee/psc-err 5))))
+  (is (= :snp/psc-page-owned-by-others (:err (tee/psc-err 6))))
+  (testing "an unknown code is named as unknown, not folded into another"
+    (is (= :snp/psc-unknown-code (:err (tee/psc-err 42))))))
+
+(deftest portio-answers-for-modeled-devices-only
+  (testing "serial 0x3F8..0x3FF"
+    (is (= :serial (:device (tee/portio 0x3F8 1))))
+    (is (= :serial (:device (tee/portio 0x3FF 1)))))
+  (testing "virtio BAR window"
+    (is (= :virtio (:device (tee/portio 0x5000 4)))))
+  (testing "a port no modeled device owns is refused"
+    (is (= "portio/unmodeled-device" (:reason (tee/portio 0x80 1)))))
+  (testing "a width IN/OUT cannot carry is refused"
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 3))))))
+
+;; ---------------------------------------------------------------------------
+;; Attestation sizes
+
+(deftest snp-report-size-is-checked
+  (testing "at exactly the minimum"
+    (let [d (tee/snp-report-request 400)]
+      (is (:ok? d))
+      (is (= 400 (:value d)))))
+  (testing "below it is refused"
+    (is (= "snp/report-size-below-minimum" (:reason (tee/snp-report-request 399))))))
+
+(deftest tdx-quote-buffer-floor
+  (is (:ok? (tee/tdx-quote-floor 4096)))
+  (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 4095)))))

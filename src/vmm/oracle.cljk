@@ -11,7 +11,8 @@
 (def catalog
   "Oracle id → classpath resource path."
   {:arm64-boot "vmm/oracle/arm64_boot_core.kir.edn"
-   :exit "vmm/oracle/exit_core.kir.edn"})
+   :exit "vmm/oracle/exit_core.kir.edn"
+   :tee "vmm/oracle/tee_core.kir.edn"})
 
 (def ^:private kir-cache (atom {}))
 (def ^:private resource-loader (atom nil))

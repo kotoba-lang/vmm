@@ -115,3 +115,33 @@ exactly the two assertions that pin that literal once it is.
 Type-1 hypervisor. ADR-0014 made that a firm non-goal and this does not
 reopen it: the facility is the host's (KVM, later HVF), the monitor is
 userspace, and what is here is the part of the monitor that thinks.
+
+## Confidential guests: TDX and SEV-SNP (2026-09-15)
+
+`kotoba/tee_core.kotoba` + `src/vmm/tee.cljk` add the third decision family:
+whether a confidential-VM launch may proceed, and what a post-boot TEE exit
+means. Two profiles:
+
+* **TDX** — launch admission requires KVM_TDX_CAPABILITIES, a verified TDVF
+  image, and the two CPUID virtualisations the guest's own detection depends
+  on (leaf 0x21 and the indirect-adapter bit). After boot the guest reaches
+  the monitor only through TDG.VP.VMCALL; the reason-to-action mapping
+  (map-gpa / io / get-quote / setup-event-notify), the MAP_GPA legality
+  split, and the port-I/O device model (serial, virtio; everything else is
+  refused by name, not zero-filled) are decisions here.
+* **SEV-SNP** — launch admission requires the KVM SNP capability, the
+  AmdSev OVMF image, the SEV/SNP CPUID bits, and a policy word whose bits
+  sit inside the SNP_LAUNCH_START mask (policy 0 is legal: all optional
+  bits off). Post-boot: page-state-change error codes refuse by name
+  (not-page-aligned, not-shared, page-owned; an unknown code stays
+  unknown), and the guest-request report path refuses a declared size
+  below the 400-byte fixed report body.
+
+The mechanism stays in `aiueos.hvt`: the KVM_SEV_* and KVM_TDX_* ioctl
+families, RMP page management, TDREPORT/ATTESTATION fetch, and the GHCB
+shared page are Linux-side ioctls that this macOS host cannot exercise.
+The measured boundary, stated rather than hidden: the decision plane runs
+green on both runtimes (JVM `clojure.test` 24 tests / 116 assertions; kbb
+spot checks above), while the ioctl wiring in hvt is unimplemented and
+untestable here — a TEE launch attempted on this host must refuse, and
+`tee/tdx-launch` with `kvm-tdx-ok 0` is exactly that refusal.
