@@ -119,6 +119,13 @@
   (is (= :snp/psc-not-page-aligned (:err (tee/psc-err 2))))
   (is (= :snp/psc-not-shared (:err (tee/psc-err 5))))
   (is (= :snp/psc-page-owned-by-others (:err (tee/psc-err 6))))
+  (testing "the remaining AMD 24593 table 65 codes are pinned by name"
+    (is (= :snp/psc-not-host (:err (tee/psc-err 1))))
+    (is (= :snp/psc-not-in-closure (:err (tee/psc-err 3))))
+    (is (= :snp/psc-not-private (:err (tee/psc-err 4))))
+    (is (= :snp/psc-page-not-owned (:err (tee/psc-err 7))))
+    (is (= :snp/psc-page-not-guest (:err (tee/psc-err 8))))
+    (is (= :snp/psc-not-guest-encrypted (:err (tee/psc-err 16)))))
   (testing "an unknown code is named as unknown, not folded into another"
     (is (= :snp/psc-unknown-code (:err (tee/psc-err 42))))))
 
@@ -131,7 +138,19 @@
   (testing "a port no modeled device owns is refused"
     (is (= "portio/unmodeled-device" (:reason (tee/portio 0x80 1)))))
   (testing "a width IN/OUT cannot carry is refused"
-    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 3))))))
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 3)))))
+  (testing "the word width len 2 is accepted on a modeled device"
+    (is (= :serial (:device (tee/portio 0x3F8 2)))))
+  (testing "the virtio BAR window is 0x5000..0x5FFF exactly, both edges pinned"
+    (is (= :virtio (:device (tee/portio 0x5000 1))))
+    (is (= :virtio (:device (tee/portio 0x5FFF 4))))
+    (is (= "portio/unmodeled-device" (:reason (tee/portio 0x6000 1))))
+    (is (= "portio/unmodeled-device" (:reason (tee/portio 0x4FFF 1)))))
+  (testing "the floppy control window 0x3F5..0x3F7 is refused exactly, and both edges stay unmodeled"
+    (is (= "portio/unmodeled-device" (:reason (tee/portio 0x3F5 1))))
+    (is (= "portio/unmodeled-device" (:reason (tee/portio 0x3F7 2))))
+    (is (= "portio/unmodeled-device" (:reason (tee/portio 0x3F4 1))))
+    (is (= :serial (:device (tee/portio 0x3F8 1))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Attestation sizes

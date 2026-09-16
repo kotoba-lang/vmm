@@ -254,7 +254,7 @@
     (and (>= port 1016) (<= port 1023))   ;; 0x3F8..0x3FF serial
     (result-ok-of [:result :i64 :string] 1)
 
-    (and (>= port 0x5000) (<= port (+ 0x5000 4096)))
+    (and (>= port 0x5000) (< port (+ 0x5000 4096)))
     (result-ok-of [:result :i64 :string] 2)  ;; virtio-pci modern BAR
 
     :else
