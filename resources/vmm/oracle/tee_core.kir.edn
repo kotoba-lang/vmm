@@ -321,7 +321,7 @@
       (if
        (let
         [__kotoba_and_2 (>= port 20480)]
-        (if __kotoba_and_2 (<= port (+ 20480 4096)) __kotoba_and_2))
+        (if __kotoba_and_2 (< port (+ 20480 4096)) __kotoba_and_2))
        (result-ok-of [:result :i64 :string] 2)
        (result-err-of
         [:result :i64 :string]
