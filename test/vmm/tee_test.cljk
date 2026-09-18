@@ -129,6 +129,14 @@
   (testing "an unknown code is named as unknown, not folded into another"
     (is (= :snp/psc-unknown-code (:err (tee/psc-err 42))))))
 
+(deftest psc-unknown-code-gaps-stay-unknown
+  ;; AMD 24593 table 65 leaves 9..15 reserved; both edges of the gap must
+  ;; stay :snp/psc-unknown-code, never folded into a neighbouring code.
+  (is (= :snp/psc-unknown-code (:err (tee/psc-err 9))))
+  (is (= :snp/psc-unknown-code (:err (tee/psc-err 15))))
+  ;; 16 is the last named code on the other side of the gap
+  (is (= :snp/psc-not-guest-encrypted (:err (tee/psc-err 16)))))
+
 (deftest portio-answers-for-modeled-devices-only
   (testing "serial 0x3F8..0x3FF"
     (is (= :serial (:device (tee/portio 0x3F8 1))))
