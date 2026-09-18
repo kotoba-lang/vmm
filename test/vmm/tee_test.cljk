@@ -166,3 +166,18 @@
 (deftest tdx-quote-buffer-floor
   (is (:ok? (tee/tdx-quote-floor 4096)))
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 4095)))))
+
+(deftest tdvf-range-edges-are-pinned
+  ;; The 8 MiB TDVF flash window (base 0xFEC0_0000 under 4G-64M) is the
+  ;; only firmware placement the monitor maps; the exact edges decide
+  ;; whether a mis-planned image is caught or silently accepted.
+  (let [base 4273995776
+        end (+ base 8388608)]
+    (testing "one byte below the base is outside"
+      (is (not (:in? (tee/tdvf-range (dec base))))))
+    (testing "the base itself is the first byte inside"
+      (is (:in? (tee/tdvf-range base))))
+    (testing "the last byte of the window is inside"
+      (is (:in? (tee/tdvf-range (dec end)))))
+    (testing "the first byte past the window is outside"
+      (is (not (:in? (tee/tdvf-range end)))))))

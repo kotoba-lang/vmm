@@ -149,3 +149,13 @@
   (if (>= buf-size (n @quote-min-bytes))
     {:ok? true :size buf-size}
     {:ok? false :reason "tdx/quote-buffer-below-minimum"}))
+
+(defn tdvf-range
+  "Is a guest-physical address inside the 8 MiB TDVF flash window the
+  monitor maps under 4G-64M (base 0xFEC0_0000)? The edges are the
+  decision: the base itself is in, one byte below and one byte past the
+  end are out, because that is exactly where a mis-planned firmware
+  image lands."
+  [gpa]
+  (let [d (c :in-tdvf-range? [gpa])]
+    {:ok? true :in? (= (n d) 1)}))
