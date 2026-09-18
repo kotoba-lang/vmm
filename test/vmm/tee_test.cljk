@@ -165,4 +165,6 @@
 
 (deftest tdx-quote-buffer-floor
   (is (:ok? (tee/tdx-quote-floor 4096)))
-  (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 4095)))))
+  (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 4095))))
+  ;; the first size past the floor is accepted, not rounded or re-floored
+  (is (let [d (tee/tdx-quote-floor 4097)] (and (:ok? d) (= 4097 (:size d))))))
