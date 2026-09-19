@@ -169,7 +169,12 @@
       (is (:ok? d))
       (is (= 400 (:value d)))))
   (testing "below it is refused"
-    (is (= "snp/report-size-below-minimum" (:reason (tee/snp-report-request 399))))))
+    (is (= "snp/report-size-below-minimum" (:reason (tee/snp-report-request 399))))
+  ;; the first size past the floor is accepted with :value passthrough,
+  ;; not clamped to the minimum (mirrors tdx-quote-floor 4097)
+  (let [d (tee/snp-report-request 401)]
+    (is (:ok? d))
+    (is (= 401 (:value d))))))
 
 (deftest tdx-quote-buffer-floor
   (is (:ok? (tee/tdx-quote-floor 4096)))
