@@ -147,6 +147,13 @@
     (is (= "portio/unmodeled-device" (:reason (tee/portio 0x80 1)))))
   (testing "a width IN/OUT cannot carry is refused"
     (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 3)))))
+  (testing "a zero-width port-I/O is refused before the window is consulted"
+    ;; len 0 is not a width IN/OUT can carry (1, 2, 4). The width check
+    ;; runs first, so even a port no device owns is named bad-width,
+    ;; never unmodeled-device: the refusal names the rule the guest
+    ;; actually violated.
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 0))))
+    (is (= "portio/bad-width" (:reason (tee/portio 0 0)))))
   (testing "the word width len 2 is accepted on a modeled device"
     (is (= :serial (:device (tee/portio 0x3F8 2)))))
   (testing "the virtio BAR window is 0x5000..0x5FFF exactly, both edges pinned"
@@ -169,7 +176,13 @@
       (is (:ok? d))
       (is (= 400 (:value d)))))
   (testing "below it is refused"
-    (is (= "snp/report-size-below-minimum" (:reason (tee/snp-report-request 399))))))
+    (is (= "snp/report-size-below-minimum" (:reason (tee/snp-report-request 399)))))
+  (testing "the first size past the minimum is accepted as-is, not floored"
+    ;; mirror of tdx-quote-floor's edge discipline: 401 passes through,
+    ;; never rounded up or re-floored to the minimum.
+    (let [d (tee/snp-report-request 401)]
+      (is (:ok? d))
+      (is (= 401 (:value d))))))
 
 (deftest tdx-quote-buffer-floor
   (is (:ok? (tee/tdx-quote-floor 4096)))
