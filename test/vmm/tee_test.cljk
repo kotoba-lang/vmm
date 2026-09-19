@@ -176,3 +176,25 @@
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 4095))))
   ;; the first size past the floor is accepted, not rounded or re-floored
   (is (let [d (tee/tdx-quote-floor 4097)] (and (:ok? d) (= 4097 (:size d))))))
+
+;; ---------------------------------------------------------------------------
+;; 4K page boundary helpers (quot/multiply lowering; no direct consumers
+;; yet, but the exported predicates deserve pinned edges before anything
+;; builds on them)
+
+(deftest page-aligned-boundaries
+  (testing "aligned GPAs answer 1, including 0"
+    (is (= 1 (tee/page-aligned? 0)))
+    (is (= 1 (tee/page-aligned? 0x1000)))
+    (is (= 1 (tee/page-aligned? 0x62C9D000))))
+  (testing "one past an aligned GPA answers 0"
+    (is (= 0 (tee/page-aligned? 0x1001)))
+    (is (= 0 (tee/page-aligned? 0xFFF)))))
+
+(deftest align-4k-boundaries
+  (testing "already-aligned GPAs are unchanged"
+    (is (= 0 (tee/align-4k 0)))
+    (is (= 0x1000 (tee/align-4k 0x1000))))
+  (testing "the next page up rounds, never truncates"
+    (is (= 0x2000 (tee/align-4k 0x1001)))
+    (is (= 0x1000 (tee/align-4k 0xFFF)))))

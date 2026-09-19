@@ -149,3 +149,9 @@
   (if (>= buf-size (n @quote-min-bytes))
     {:ok? true :size buf-size}
     {:ok? false :reason "tdx/quote-buffer-below-minimum"}))
+
+;; 4K boundary helpers on the kotoba judgment surface (quot/multiply
+;; lowering in tee_core.kotoba). Exposed so the JVM route pins the same
+;; edges the KIR oracle computes; the host still decides nothing itself.
+(defn page-aligned? [gpa] (n (c :page-aligned? [gpa])))
+(defn align-4k [gpa] (n (c :align-4k [gpa])))
