@@ -181,3 +181,11 @@
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 4095))))
   ;; the first size past the floor is accepted, not rounded or re-floored
   (is (let [d (tee/tdx-quote-floor 4097)] (and (:ok? d) (= 4097 (:size d))))))
+
+;; The top of the documented policy mask (VMGEXIT, bit 23 = 0x800000) is still
+;; inside the mask; the first bit past it (0x1000000) is not. AMD 24593: the
+;; policy word carries SMT (bit 8), single-socket (bit 3), VMGEXIT (bit 23).
+(deftest snp-policy-mask-top-bit-boundary
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy 8388608))))
+  (is (= "snp/policy-bits-outside-mask"
+         (:reason (tee/snp-launch (assoc snp-good :policy 16777216))))))
