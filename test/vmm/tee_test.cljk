@@ -189,3 +189,10 @@
   (is (:ok? (tee/snp-launch (assoc snp-good :policy 8388608))))
   (is (= "snp/policy-bits-outside-mask"
          (:reason (tee/snp-launch (assoc snp-good :policy 16777216))))))
+
+(deftest psc-reserved-gap-interior-stays-unknown
+  ;; AMD 24593 table 65 codes 10..14 sit inside the reserved gap. Only the
+  ;; gap edges (9, 15) were pinned before; every interior code must also
+  ;; stay :snp/psc-unknown-code, never folded into a neighbouring name.
+  (doseq [code [10 11 12 13 14]]
+    (is (= :snp/psc-unknown-code (:err (tee/psc-err code))))))
