@@ -114,6 +114,17 @@
   (testing "an empty range is refused"
     (is (= "tdvmcall/map-gpa-empty" (:reason (tee/map-gpa 0x1000 0))))))
 
+;; Clause order: the alignment/size gates precede the half decision. A
+;; shared-half request (bit 48) that is unaligned is refused as unaligned,
+;; never answered as a shared conversion; a shared request with size 0 is
+;; refused as empty. The mechanism must never act on the half of a range
+;; the core already refused.
+(deftest map-gpa-refuses-before-it-answers-the-half
+  (is (= "tdvmcall/map-gpa-unaligned"
+         (:reason (tee/map-gpa (+ 0x1001 281474976710656) 0x1000))))
+  (is (= "tdvmcall/map-gpa-empty"
+         (:reason (tee/map-gpa (+ 0x1000 281474976710656) 0)))))
+
 (deftest psc-errors-refuse-by-name
   (is (= :none (:err (tee/psc-err 0))))
   (is (= :snp/psc-not-page-aligned (:err (tee/psc-err 2))))
