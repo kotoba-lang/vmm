@@ -6,7 +6,7 @@
   says otherwise -- with every other test green, because every other test
   runs the artifact."
   (:require [kotoba.lang.edn :as edn]
-            [clojure.java.io :as io]
+            [kotoba.io :as io]
             [kotoba.test :refer [deftest is testing]]
             [vmm.oracle :as oracle]
             [vmm.oracle-gen :as gen]))
@@ -24,7 +24,7 @@
 (deftest shipped-kir-matches-its-source
   (doseq [{:keys [source out]} (gen/artifacts)]
     (testing source
-      (is (.exists (io/file out)) (str out " is missing"))
+      (is (io/exists? (io/file out)) (str out " is missing"))
       (is (= (gen/compile-kir source)
              (edn/read-string (slurp out)))
           (str out " is stale -- run `kbb -M:test:gen`")))))
