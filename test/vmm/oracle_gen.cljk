@@ -7,8 +7,8 @@
 ;; freshness gate uses, so "regenerated" and "checked" cannot diverge.
 
 (ns vmm.oracle-gen
-  (:require [clojure.java.io :as io]
-            [clojure.pprint :as pp]
+  (:require [kotoba.io :as io]
+            [kotoba.pprint :as pp]
             [kotoba.lang.text :as str]
             [kotoba.compiler.core :as compiler])
   (:gen-class))
@@ -16,13 +16,13 @@
 (def target :wasm32-kotoba-v1)
 
 (defn artifacts []
-  (->> (file-seq (io/file "kotoba"))
-       (filter #(and (.isFile %) (str/ends-with? (.getName %) "_core.kotoba")))
-       (sort-by #(.getName %))
+  (->> (io/file-seq (io/file "kotoba"))
+       (filter #(and (io/file? %) (str/ends-with? (io/file-name %) "_core.kotoba")))
+       (sort-by #(io/file-name %))
        (mapv (fn [f]
-               {:source (.getPath f)
+               {:source (io/path f)
                 :out (str "resources/vmm/oracle/"
-                          (str/replace (.getName f) #"\.kotoba$" "")
+                          (str/replace (io/file-name f) #"\.kotoba$" "")
                           ".kir.edn")}))))
 
 (defn compile-kir [source-path]
