@@ -5,7 +5,7 @@
   regenerates, and the host keeps executing the old decision while the source
   says otherwise -- with every other test green, because every other test
   runs the artifact."
-  (:require [clojure.edn :as edn]
+  (:require [kotoba.lang.edn :as edn]
             [clojure.java.io :as io]
             [kotoba.test :refer [deftest is testing]]
             [vmm.oracle :as oracle]
