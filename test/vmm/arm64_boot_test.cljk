@@ -6,7 +6,7 @@
   Each negative case pins the reason literal: a test that only asserts
   `:ok? false` passes when the plan fails for a different reason than the one
   it claims to be about."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [vmm.arm64-boot :as boot]))
 
 (def mib (* 1024 1024))

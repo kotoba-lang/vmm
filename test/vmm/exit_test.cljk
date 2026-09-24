@@ -1,5 +1,5 @@
 (ns vmm.exit-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [vmm.exit :as exit]))
 
 (def uart 0x09000000)

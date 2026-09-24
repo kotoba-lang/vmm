@@ -6,7 +6,7 @@
   the reason literal: a test that only asserts `:ok? false` passes when
   the admission fails for a different reason than the one it claims to
   be about."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [vmm.tee :as tee]))
 
 ;; ---------------------------------------------------------------------------
