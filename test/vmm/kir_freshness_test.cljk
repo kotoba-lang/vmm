@@ -7,7 +7,7 @@
   runs the artifact."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.test :refer [deftest is testing]]
+            [kotoba.test :refer [deftest is testing]]
             [vmm.oracle :as oracle]
             [vmm.oracle-gen :as gen]))
 
