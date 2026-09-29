@@ -15,7 +15,7 @@
 ;;
 ;; This file decides. It never reads a file, maps memory, or calls an ioctl:
 ;; the monitor does that and asks here. Errors are values -- `[:result T E]`
-;; with a pinned reason literal, never a throw (root CLAUDE.md, aiueos
+;; with a pinned reason literal, never a throw (root AGENTS.md, aiueos
 ;; ADR-0015's decision-free-mechanism split applied to the tender).
 ;;
 ;; Host call path: vmm.arm64-boot/plan (executes the shipped KIR).

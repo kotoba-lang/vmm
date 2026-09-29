@@ -79,7 +79,7 @@ it being wrong.
 (exit/psci-action 0x84000010)   ;; => {:ok? false :reason "psci/not-supported"}
 ```
 
-Errors are values. Nothing here throws to refuse -- root CLAUDE.md's
+Errors are values. Nothing here throws to refuse -- root AGENTS.md's
 `[:result T E]` rule -- and every refusal names itself with a literal the
 tests pin, so renaming a reason upstream fails a test instead of quietly
 widening what is admitted.
