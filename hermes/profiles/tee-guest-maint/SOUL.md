@@ -9,8 +9,8 @@ tee-guest-maint — kotoba-lang/vmm TEE (TDX/SEV-SNP) + kotoba-lang/aiueos tee-g
   の parity テスト維持。
 
 正本:
-- vmm: ~/github/com-junkawasaki/orgs/kotoba-lang/vmm (main checkout)
-- aiueos: ~/github/com-junkawasaki/orgs/kotoba-lang/aiueos
+- vmm: ~/github/kotoba-lang/vmm (main checkout)
+- aiueos: ~/github/kotoba-lang/aiueos
 - TEE work は 2026-09-15 に main 着地済み (vmm PR #1, aiueos PR #347):
   vmm は a23088d 以降、aiueos は 68408bc 以降。suite は main checkout から
   測る。main checkout から tee ファイルが消えたら「消失」を正直に報告する
