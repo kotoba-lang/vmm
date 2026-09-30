@@ -160,6 +160,18 @@
     (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 3)))))
   (testing "the word width len 2 is accepted on a modeled device"
     (is (= :serial (:device (tee/portio 0x3F8 2)))))
+
+  ;; Width boundary: the gate admits exactly {1, 2, 4}. Zero is not a
+  ;; transfer and 8 is not an x86 IN/OUT width; both are refused at the
+  ;; width gate before any device check, so a width refusal is identical
+  ;; on modeled and unmodeled ports.
+  (testing "width 0 and width 8 are refused at the width gate, not by device"
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 0))))
+    (is (= "portio/bad-width" (:reason (tee/portio 0x80 0))))
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 8)))))
+  (testing "the dword width len 4 is accepted on a modeled device"
+    (is (= :serial (:device (tee/portio 0x3F8 4))))
+    (is (= :serial (:device (tee/portio 0x3FF 4)))))
   (testing "the virtio BAR window is 0x5000..0x5FFF exactly, both edges pinned"
     (is (= :virtio (:device (tee/portio 0x5000 1))))
     (is (= :virtio (:device (tee/portio 0x5FFF 4))))
