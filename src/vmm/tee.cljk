@@ -142,6 +142,15 @@
   [declared-size]
   (r :snp-get-report-req [declared-size]))
 
+(defn page-type
+  "A TDH.MEM.* GPCM page kind from the TDX module: 1 = private
+  (encrypted), 2 = shared. A kind this monitor does not model is
+  refused by name and the mechanism must not act on it."
+  [kind]
+  (let [d (r :tdx-page-type [kind])]
+    (if-not (:ok? d) d
+      {:ok? true :page-kind ({1 :private 2 :shared} (n (:value d)))})))
+
 (defn tdx-quote-floor
   "The quote buffer the monitor stages for a TDVMCALL<GET_QUOTE> must be
   at least the core's floor; a smaller buffer is refused."
