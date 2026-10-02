@@ -207,3 +207,18 @@
   ;; stay :snp/psc-unknown-code, never folded into a neighbouring name.
   (doseq [code [10 11 12 13 14]]
     (is (= :snp/psc-unknown-code (:err (tee/psc-err code))))))
+
+;; The single-socket bit (bit 3 = 8) was never pinned alone, and neither
+;; was any combination of the three legal mask bits. snp-policy-bounds is
+;; "every subset passes" in intent -- the mask test must hold for each
+;; subset of {SMT 256, single-socket 8, VMGEXIT 8388608}, not only the
+;; lone and full bits already pinned. The next invented bit past the
+;; refusals already pinned (bit 0, 2^40) is bit 1 (2); it stays outside.
+(deftest snp-policy-mask-single-socket-and-subsets
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy 8))))
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 8 256)))))
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 8 8388608)))))
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 256 8388608)))))
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 8 256 8388608)))))
+  (is (= "snp/policy-bits-outside-mask"
+         (:reason (tee/snp-launch (assoc snp-good :policy 2))))))
