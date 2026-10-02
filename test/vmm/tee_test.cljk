@@ -183,6 +183,13 @@
     (is (= "portio/unmodeled-device" (:reason (tee/portio 0x3F4 1))))
     (is (= :serial (:device (tee/portio 0x3F8 1))))))
 
+;; Negative widths are not x86 IN/OUT sizes either; the gate must reject
+;; them by exact-set membership, not by a range form like (<= 0 len 8),
+;; where a signed negative would pass if the oracle widened len unsigned.
+(deftest portio-negative-width-refused
+  (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 -1))))
+  (is (= "portio/bad-width" (:reason (tee/portio 0x5000 -4)))))
+
 ;; ---------------------------------------------------------------------------
 ;; Attestation sizes
 
