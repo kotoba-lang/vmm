@@ -125,6 +125,27 @@
   (is (= "tdvmcall/map-gpa-empty"
          (:reason (tee/map-gpa (+ 0x1000 281474976710656) 0)))))
 
+;; The core exports page-aligned? and align-4k but no host wrapper existed
+;; and no test covered either, so an unaligned-GPA refusal could drift.
+;; Expected verdicts are hand-computed: 0 is a real page; 4095 rounds up;
+;; 4096 is already aligned; 4097 rounds to 8192.
+(deftest page-alignment-boundaries
+  (testing "page 0 is aligned -- it is a real page, not the absence of one"
+    (is (tee/page-aligned? 0)))
+  (testing "the exact 4K edges"
+    (is (tee/page-aligned? 4096))
+    (is (not (tee/page-aligned? 4095)))
+    (is (not (tee/page-aligned? 4097)))
+    (is (not (tee/page-aligned? 1657655297)))) ;; snp-secrets-gpa + 1
+  (testing "align-4k rounds up, never down"
+    (is (= 0 (tee/align-4k 0)))
+    (is (= 4096 (tee/align-4k 4095)))
+    (is (= 4096 (tee/align-4k 4096)))
+    (is (= 8192 (tee/align-4k 4097))))
+  (testing "the monitor refuses an unaligned gpa 0x1 before answering the half"
+    (is (= "tdvmcall/map-gpa-unaligned"
+           (:reason (tee/map-gpa 1 4096))))))
+
 (deftest psc-errors-refuse-by-name
   (is (= :none (:err (tee/psc-err 0))))
   (is (= :snp/psc-not-page-aligned (:err (tee/psc-err 2))))

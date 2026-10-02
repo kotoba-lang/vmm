@@ -136,6 +136,22 @@
     (if-not (:ok? d) d
       {:ok? true :device ({1 :serial 2 :virtio} (n (:value d)))})))
 
+(defn- page-aligned-i64
+  "Is the GPA 4K-aligned? The core answers 1/0 for runtime-parity reasons;
+  the wrapper normalises to a boolean once, here."
+  [gpa]
+  (= 1 (n (c :page-aligned? [gpa]))))
+
+(defn page-aligned?
+  "A GPA the monitor maps at a 4K page edge (the S-EPT / RMP page size).
+  0 is aligned: page 0 is a real page, not the absence of one."
+  [gpa] (page-aligned-i64 gpa))
+
+(defn align-4k
+  "Round a GPA up to the next 4K page edge. The boundary cases matter:
+  0 stays 0, 4095 rounds to 4096, 4096 stays 4096, 4097 rounds to 8192."
+  [gpa] (n (c :align-4k [gpa])))
+
 (defn snp-report-request
   "An SNP guest-request for an attestation report: the declared message
   size must cover the fixed report body or the request is refused."
