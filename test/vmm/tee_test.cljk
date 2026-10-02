@@ -171,6 +171,23 @@
     (is (= "portio/unmodeled-device" (:reason (tee/portio 0x3F4 1))))
     (is (= :serial (:device (tee/portio 0x3F8 1))))))
 
+;; The width gate runs before the device map, so any port at any len the
+;; gate refuses is answered by the width, not the device. IN/OUT can carry
+;; only byte (1), word (2), dword (4) operands: len 0 moves no bytes, len 8
+;; and negative lens are not encodable widths. Expected verdicts are
+;; hand-computed from tee_core.kotoba portio-verdict's first cond clause.
+(deftest portio-width-gate-edges
+  (testing "len 0 is refused as a bad width even on a modeled device"
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 0)))))
+  (testing "a negative len is refused as a bad width, not a device miss"
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 -1))))
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 -4)))))
+  (testing "len 8 is beyond the largest encodable width"
+    (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 8)))))
+  (testing "the width gate precedes the device map"
+    ;; unmodeled port, but the width is what refuses it
+    (is (= "portio/bad-width" (:reason (tee/portio 0x80 0))))))
+
 ;; ---------------------------------------------------------------------------
 ;; Attestation sizes
 
