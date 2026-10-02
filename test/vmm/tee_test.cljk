@@ -174,6 +174,17 @@
 ;; ---------------------------------------------------------------------------
 ;; Attestation sizes
 
+;; The TDVF flash window: base 0xFEC0_0000, 8 MiB, under 4G-64M (Intel TDX
+;; module spec / OVMF TDX profile). Both exact edges are inside; both
+;; neighbours are out. Base/size come from the core, not restated.
+(deftest tdvf-flash-window-edges
+  (let [base (long @tee/tdvf-range-base)
+        size (long @tee/tdvf-range-size)]
+    (is (tee/in-tdvf-range? base))
+    (is (tee/in-tdvf-range? (+ base size -1)))
+    (is (not (tee/in-tdvf-range? (+ base size))))
+    (is (not (tee/in-tdvf-range? (- base 1))))))
+
 (deftest snp-report-size-is-checked
   (testing "at exactly the minimum"
     (let [d (tee/snp-report-request 400)]
