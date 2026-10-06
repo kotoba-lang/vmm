@@ -9,6 +9,16 @@
   (:require [kotoba.test :refer [deftest is testing]]
             [vmm.tee :as tee]))
 
+;; The KIR interpreter returns JVM integers or JS BigInt. These fixtures
+;; compare only exact small values; reject an unsafe conversion instead of
+;; rounding a 64-bit value or applying CLJS long to a BigInt.
+(defn- small-kir-integer [value]
+  #?(:clj (long value)
+     :cljs (let [number (js/Number value)]
+             (when-not (js/Number.isSafeInteger number)
+               (throw (ex-info "fixture integer is not exactly representable" {:value value})))
+             number)))
+
 ;; ---------------------------------------------------------------------------
 ;; TDX launch
 
@@ -102,11 +112,11 @@
   (testing "aligned private conversion"
     (let [d (tee/map-gpa 0x1000 0x1000)]
       (is (:ok? d))
-      (is (= 1 (:value d)))))
+      (is (= 1 (small-kir-integer (:value d))))))
   (testing "bit 48 set means the guest wants the shared half"
     (let [d (tee/map-gpa (+ 0x1000 281474976710656) 0x1000)]
       (is (:ok? d))
-      (is (= 2 (:value d)))))
+      (is (= 2 (small-kir-integer (:value d))))))
   (testing "an unaligned GPA is refused"
     (is (= "tdvmcall/map-gpa-unaligned" (:reason (tee/map-gpa 0x1001 0x1000)))))
   (testing "an unaligned size is refused"
@@ -217,18 +227,29 @@
 ;; ---------------------------------------------------------------------------
 ;; Attestation sizes
 
+;; The TDVF flash window: base 0xFEC0_0000, 8 MiB, under 4G-64M (Intel TDX
+;; module spec / OVMF TDX profile). Both exact edges are inside; both
+;; neighbours are out. Base/size come from the core, not restated.
+(deftest tdvf-flash-window-edges
+  (let [base (small-kir-integer @tee/tdvf-range-base)
+        size (small-kir-integer @tee/tdvf-range-size)]
+    (is (tee/in-tdvf-range? base))
+    (is (tee/in-tdvf-range? (+ base size -1)))
+    (is (not (tee/in-tdvf-range? (+ base size))))
+    (is (not (tee/in-tdvf-range? (- base 1))))))
+
 (deftest snp-report-size-is-checked
   (testing "at exactly the minimum"
     (let [d (tee/snp-report-request 400)]
       (is (:ok? d))
-      (is (= 400 (:value d)))))
+      (is (= 400 (small-kir-integer (:value d))))))
   (testing "below it is refused"
     (is (= "snp/report-size-below-minimum" (:reason (tee/snp-report-request 399))))
   ;; the first size past the floor is accepted with :value passthrough,
   ;; not clamped to the minimum (mirrors tdx-quote-floor 4097)
   (let [d (tee/snp-report-request 401)]
     (is (:ok? d))
-    (is (= 401 (:value d))))))
+    (is (= 401 (small-kir-integer (:value d)))))))
 
 (deftest tdx-quote-buffer-floor
   (is (:ok? (tee/tdx-quote-floor 4096)))

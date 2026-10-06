@@ -45,6 +45,8 @@
 (def quote-min-bytes (delay (c :quote-min-bytes [])))
 (def snp-secrets-gpa (delay (c :snp-secrets-gpa [])))
 (def snp-cpuid-gpa (delay (c :snp-cpuid-gpa [])))
+(def tdvf-range-base (delay (c :tdvf-range-base [])))
+(def tdvf-range-size (delay (c :tdvf-range-size [])))
 
 (defn- verdict-name
   "The admit functions return packed bit values; the monitor reads them
@@ -136,6 +138,11 @@
     (if-not (:ok? d) d
       {:ok? true :device ({1 :serial 2 :virtio} (n (:value d)))})))
 
+(defn in-tdvf-range?
+  "Is a guest-physical address inside the TDVF flash window? The core
+  answers 1/0; this normalises it to a host boolean."
+  [gpa]
+  (= 1 (n (c :in-tdvf-range? [gpa]))))
 (defn- page-aligned-i64
   "Is the GPA 4K-aligned? The core answers 1/0 for runtime-parity reasons;
   the wrapper normalises to a boolean once, here."
