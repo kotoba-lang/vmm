@@ -112,7 +112,12 @@
   (testing "an unaligned size is refused"
     (is (= "tdvmcall/map-gpa-size-unaligned" (:reason (tee/map-gpa 0x1000 4097)))))
   (testing "an empty range is refused"
-    (is (= "tdvmcall/map-gpa-empty" (:reason (tee/map-gpa 0x1000 0))))))
+    (is (= "tdvmcall/map-gpa-empty" (:reason (tee/map-gpa 0x1000 0)))))
+  (testing "a negative size is refused as empty, never as a wrap-around range"
+    ;; The size gate is (<= size 0); only size 0 was pinned before. A
+    ;; negative size (e.g. -4096) must take the same literal and must not
+    ;; fall through to the half decision as a huge unsigned range.
+    (is (= "tdvmcall/map-gpa-empty" (:reason (tee/map-gpa 0x1000 -4096))))))
 
 ;; Clause order: the alignment/size gates precede the half decision. A
 ;; shared-half request (bit 48) that is unaligned is refused as unaligned,
