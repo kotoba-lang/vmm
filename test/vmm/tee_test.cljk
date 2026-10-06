@@ -222,3 +222,13 @@
   (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 8 256 8388608)))))
   (is (= "snp/policy-bits-outside-mask"
          (:reason (tee/snp-launch (assoc snp-good :policy 2))))))
+
+;; The GPCM page kinds TDH.MEM.* accepts are only 1 (private, encrypted)
+;; and 2 (shared). A caller passing 0 (the uninitialised value) or 3 (the
+;; first kind past the documented pair) is refused by name -- the
+;; mechanism must not act on a kind the core did not admit.
+(deftest tdx-page-type-refuses-unknown-kinds-by-name
+  (is (= :private (:page-kind (tee/page-type 1))))
+  (is (= :shared (:page-kind (tee/page-type 2))))
+  (is (= "tdvmcall/unknown-page-kind" (:reason (tee/page-type 0))))
+  (is (= "tdvmcall/unknown-page-kind" (:reason (tee/page-type 3)))))
