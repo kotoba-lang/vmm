@@ -201,6 +201,17 @@
   (is (= "snp/policy-bits-outside-mask"
          (:reason (tee/snp-launch (assoc snp-good :policy 16777216))))))
 
+;; The single-socket edge of the same mask: bit 3 (8) alone is a legal
+;; SNP_LAUNCH_START policy, while the first bit past it (16) is invented
+;; -- nothing between single-socket (bit 3) and SMT (bit 8) is documented
+;; (AMD 24593, SNP_LAUNCH_START policy word). The full known word
+;; (8 | 256 | 8388608) is also legal, never refused by the mask.
+(deftest snp-policy-mask-single-socket-bit-boundary
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy 8))))
+  (is (= "snp/policy-bits-outside-mask"
+         (:reason (tee/snp-launch (assoc snp-good :policy 16)))))
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 8 256 8388608))))))
+
 (deftest psc-reserved-gap-interior-stays-unknown
   ;; AMD 24593 table 65 codes 10..14 sit inside the reserved gap. Only the
   ;; gap edges (9, 15) were pinned before; every interior code must also
