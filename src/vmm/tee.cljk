@@ -45,6 +45,8 @@
 (def quote-min-bytes (delay (c :quote-min-bytes [])))
 (def snp-secrets-gpa (delay (c :snp-secrets-gpa [])))
 (def snp-cpuid-gpa (delay (c :snp-cpuid-gpa [])))
+(def tdvf-range-base (delay (c :tdvf-range-base [])))
+(def tdvf-range-size (delay (c :tdvf-range-size [])))
 
 (defn- verdict-name
   "The admit functions return packed bit values; the monitor reads them
@@ -136,11 +138,41 @@
     (if-not (:ok? d) d
       {:ok? true :device ({1 :serial 2 :virtio} (n (:value d)))})))
 
+(defn in-tdvf-range?
+  "Is a guest-physical address inside the TDVF flash window? The core
+  answers 1/0; this normalises it to a host boolean."
+  [gpa]
+  (= 1 (n (c :in-tdvf-range? [gpa]))))
+(defn- page-aligned-i64
+  "Is the GPA 4K-aligned? The core answers 1/0 for runtime-parity reasons;
+  the wrapper normalises to a boolean once, here."
+  [gpa]
+  (= 1 (n (c :page-aligned? [gpa]))))
+
+(defn page-aligned?
+  "A GPA the monitor maps at a 4K page edge (the S-EPT / RMP page size).
+  0 is aligned: page 0 is a real page, not the absence of one."
+  [gpa] (page-aligned-i64 gpa))
+
+(defn align-4k
+  "Round a GPA up to the next 4K page edge. The boundary cases matter:
+  0 stays 0, 4095 rounds to 4096, 4096 stays 4096, 4097 rounds to 8192."
+  [gpa] (n (c :align-4k [gpa])))
+
 (defn snp-report-request
   "An SNP guest-request for an attestation report: the declared message
   size must cover the fixed report body or the request is refused."
   [declared-size]
   (r :snp-get-report-req [declared-size]))
+
+(defn page-type
+  "A TDH.MEM.* GPCM page kind from the TDX module: 1 = private
+  (encrypted), 2 = shared. A kind this monitor does not model is
+  refused by name and the mechanism must not act on it."
+  [kind]
+  (let [d (r :tdx-page-type [kind])]
+    (if-not (:ok? d) d
+      {:ok? true :page-kind ({1 :private 2 :shared} (n (:value d)))})))
 
 (defn tdx-quote-floor
   "The quote buffer the monitor stages for a TDVMCALL<GET_QUOTE> must be
