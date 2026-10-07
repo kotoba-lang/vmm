@@ -246,12 +246,12 @@
       (is (:ok? d))
       (is (= 400 (small-kir-integer (:value d))))))
   (testing "below it is refused"
-    (is (= "snp/report-size-below-minimum" (:reason (tee/snp-report-request 399))))
+    (is (= "snp/report-size-below-minimum" (:reason (tee/snp-report-request 399)))))
   ;; the first size past the floor is accepted with :value passthrough,
   ;; not clamped to the minimum (mirrors tdx-quote-floor 4097)
   (let [d (tee/snp-report-request 401)]
     (is (:ok? d))
-    (is (= 401 (small-kir-integer (:value d)))))))
+    (is (= 401 (small-kir-integer (:value d))))))
 
 ;; tdx-report-min-bytes (584: TDREPORT = 256 MAC + 224 TINFO + 104 aux,
 ;; Intel TDX module spec) is exported and pinned in the KIR oracle but had
@@ -286,6 +286,12 @@
   ;; code past every named entry and must stay :snp/psc-unknown-code,
   ;; never folded into a neighbouring name.
   (is (= :snp/psc-unknown-code (:err (tee/psc-err 17)))))
+;; Past the first unknown code (17): every higher value, up to and
+;; including the byte ceiling 255, must also stay :snp/psc-unknown-code,
+;; never folded into a neighbouring name.
+(deftest psc-unknown-code-ceiling-stays-unknown
+  (is (= :snp/psc-unknown-code (:err (tee/psc-err 18))))
+  (is (= :snp/psc-unknown-code (:err (tee/psc-err 255)))))
 ;; The single-socket bit (bit 3 = 8) was never pinned alone, and neither
 ;; was any combination of the three legal mask bits. snp-policy-bounds is
 ;; "every subset passes" in intent -- the mask test must hold for each
@@ -310,3 +316,13 @@
   (is (= :shared (:page-kind (tee/page-type 2))))
   (is (= "tdvmcall/unknown-page-kind" (:reason (tee/page-type 0))))
   (is (= "tdvmcall/unknown-page-kind" (:reason (tee/page-type 3)))))
+
+;; Two gates whose negative-input side was never pinned: the GPCM page
+;; kind refuses only named kinds (1, 2), so a negative kind must take
+;; tdvmcall/unknown-page-kind, and the SNP report size gate is
+;; (< declared-size min), so a negative declared size must be refused
+;; as below-minimum, never answered as a passthrough.
+(deftest negative-inputs-refused-by-name
+  (is (= "tdvmcall/unknown-page-kind" (:reason (tee/page-type -1))))
+  (is (= "snp/report-size-below-minimum"
+         (:reason (tee/snp-report-request -400)))))
