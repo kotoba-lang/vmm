@@ -253,6 +253,13 @@
     (is (:ok? d))
     (is (= 401 (small-kir-integer (:value d)))))))
 
+;; tdx-report-min-bytes (584: TDREPORT = 256 MAC + 224 TINFO + 104 aux,
+;; Intel TDX module spec) is exported and pinned in the KIR oracle but had
+;; no test coverage -- unlike its siblings (quote floor 4096, SNP report
+;; floor 400). Pin the literal so a drift to the oracle cannot pass silently.
+(deftest tdx-report-min-bytes-is-pinned
+  (is (= 584 (small-kir-integer @tee/tdx-report-min-bytes))))
+
 (deftest tdx-quote-buffer-floor
   (is (:ok? (tee/tdx-quote-floor 4096)))
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 4095))))

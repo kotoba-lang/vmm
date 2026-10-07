@@ -43,6 +43,7 @@
 (def tdx-cpu-leaf (delay (c :tdx-cpu-leaf [])))
 (def snp-cpu-leaf (delay (c :snp-cpu-leaf [])))
 (def quote-min-bytes (delay (c :quote-min-bytes [])))
+(def tdx-report-min-bytes (delay (c :tdx-report-min-bytes [])))
 (def snp-secrets-gpa (delay (c :snp-secrets-gpa [])))
 (def snp-cpuid-gpa (delay (c :snp-cpuid-gpa [])))
 (def tdvf-range-base (delay (c :tdvf-range-base [])))
