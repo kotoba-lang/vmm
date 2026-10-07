@@ -196,6 +196,8 @@
     (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 3)))))
   (testing "the word width len 2 is accepted on a modeled device"
     (is (= :serial (:device (tee/portio 0x3F8 2)))))
+  (testing "the dword width len 4 is accepted on a modeled serial device"
+    (is (= :serial (:device (tee/portio 0x3F8 4)))))
   (testing "the virtio BAR window is 0x5000..0x5FFF exactly, both edges pinned"
     (is (= :virtio (:device (tee/portio 0x5000 1))))
     (is (= :virtio (:device (tee/portio 0x5FFF 4))))
@@ -272,6 +274,11 @@
   (doseq [code [10 11 12 13 14]]
     (is (= :snp/psc-unknown-code (:err (tee/psc-err code))))))
 
+(deftest psc-first-code-past-the-last-named-stays-unknown
+  ;; AMD 24593 table 65 names 16 (PSC_NO_ENCRYPT) last; 17 is the first
+  ;; code past every named entry and must stay :snp/psc-unknown-code,
+  ;; never folded into a neighbouring name.
+  (is (= :snp/psc-unknown-code (:err (tee/psc-err 17)))))
 ;; The single-socket bit (bit 3 = 8) was never pinned alone, and neither
 ;; was any combination of the three legal mask bits. snp-policy-bounds is
 ;; "every subset passes" in intent -- the mask test must hold for each
