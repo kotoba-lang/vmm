@@ -222,6 +222,10 @@
     (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 -4)))))
   (testing "len 8 is beyond the largest encodable width"
     (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 8)))))
+  (testing "len 8 is refused at the virtio BAR top edge, before the device map"
+    (is (= "portio/bad-width" (:reason (tee/portio 0x5FFF 8)))))
+  (testing "the word width len 2 is accepted one port below the BAR top edge"
+    (is (= :virtio (:device (tee/portio 0x5FFE 2)))))
   (testing "the width gate precedes the device map"
     ;; unmodeled port, but the width is what refuses it
     (is (= "portio/bad-width" (:reason (tee/portio 0x80 0))))))
