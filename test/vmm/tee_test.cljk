@@ -326,3 +326,15 @@
   (is (= "tdvmcall/unknown-page-kind" (:reason (tee/page-type -1))))
   (is (= "snp/report-size-below-minimum"
          (:reason (tee/snp-report-request -400)))))
+
+;; snp-policy-bounds is `policy == (bit-and policy known)`. A word with
+;; every bit set (a caller passing -1, or a sign-extended mask read from
+;; a malformed ioctl) invents every bit outside the documented mask, so
+;; the bit-and formulation must refuse it -- never accept it as "all bits
+;; known" through a sign/zero-extension accident. Hand-computed from
+;; tee_core.kotoba: known = 256 + 8 + 8388608 = 8388872;
+;; bit-and(-1, 8388872) = 8388872 != -1, so the bounds answer is 0 and
+;; admit-snp-guest refuses with snp/policy-bits-outside-mask.
+(deftest snp-policy-all-bits-set-word-is-refused
+  (is (= "snp/policy-bits-outside-mask"
+         (:reason (tee/snp-launch (assoc snp-good :policy -1))))))
