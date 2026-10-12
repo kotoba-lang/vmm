@@ -266,6 +266,16 @@
   ;; the first size past the floor is accepted, not rounded or re-floored
   (is (let [d (tee/tdx-quote-floor 4097)] (and (:ok? d) (= 4097 (:size d))))))
 
+;; The known policy mask is 8 + 256 + 8388608 (AMD 24593: single-socket
+;; bit 3, SMT bit 8, VMGEXIT bit 23). The edges 1, 2 and 2^24 are pinned
+;; above; pin that EVERY single undocumented bit below bit 24 refuses on
+;; its own, so no gap between the named bits can slide through the mask
+;; gate as a legal word.
+(deftest snp-policy-mask-each-undocumented-single-bit-refuses
+  (doseq [bit [0 1 2 4 5 6 7 9 10 11 12 13 14 15 16 17 18 19 20 21 22]]
+    (is (= "snp/policy-bits-outside-mask"
+           (:reason (tee/snp-launch (assoc snp-good :policy (bit-shift-left 1 bit))))))))
+
 ;; The top of the documented policy mask (VMGEXIT, bit 23 = 0x800000) is still
 ;; inside the mask; the first bit past it (0x1000000) is not. AMD 24593: the
 ;; policy word carries SMT (bit 8), single-socket (bit 3), VMGEXIT (bit 23).
