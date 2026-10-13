@@ -87,7 +87,7 @@ widening what is admitted.
 ## Build and check
 
 ```bash
-kbb -M:test          # 12 tests, 64 assertions
+kbb -M:test          # every test under test/vmm/
 kbb -M:test:gen      # regenerate resources/vmm/oracle/*.kir.edn from kotoba/
 ```
 
@@ -141,7 +141,7 @@ The mechanism stays in `aiueos.hvt`: the KVM_SEV_* and KVM_TDX_* ioctl
 families, RMP page management, TDREPORT/ATTESTATION fetch, and the GHCB
 shared page are Linux-side ioctls that this macOS host cannot exercise.
 The measured boundary, stated rather than hidden: the decision plane runs
-green on both runtimes (JVM `clojure.test` 24 tests / 116 assertions; kbb
+green on both runtimes (JVM `clojure.test`; kbb
 spot checks above), while the ioctl wiring in hvt is unimplemented and
 untestable here — a TEE launch attempted on this host must refuse, and
 `tee/tdx-launch` with `kvm-tdx-ok 0` is exactly that refusal.
