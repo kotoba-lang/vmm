@@ -240,7 +240,12 @@
     (is (tee/in-tdvf-range? base))
     (is (tee/in-tdvf-range? (+ base size -1)))
     (is (not (tee/in-tdvf-range? (+ base size))))
-    (is (not (tee/in-tdvf-range? (- base 1))))))
+    (is (not (tee/in-tdvf-range? (- base 1))))
+    ;; The window sits under 4G (OVMF-TDX reserves 0xFEC00000-8M for the
+    ;; flash area). A GPA at or above 4G, and a negative GPA, are outside
+    ;; the window and must never be folded in by an unsigned wrap-around.
+    (is (not (tee/in-tdvf-range? 4294967296)))   ;; 4G: first gpa past the window's ceiling region
+    (is (not (tee/in-tdvf-range? -1)))))
 
 (deftest snp-report-size-is-checked
   (testing "at exactly the minimum"
