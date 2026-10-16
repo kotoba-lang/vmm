@@ -138,7 +138,9 @@
   (is (= "tdvmcall/map-gpa-unaligned"
          (:reason (tee/map-gpa (+ 0x1001 281474976710656) 0x1000))))
   (is (= "tdvmcall/map-gpa-empty"
-         (:reason (tee/map-gpa (+ 0x1000 281474976710656) 0)))))
+         (:reason (tee/map-gpa (+ 0x1000 281474976710656) 0))))
+  (is (= "tdvmcall/map-gpa-size-unaligned"
+         (:reason (tee/map-gpa (+ 0x1000 281474976710656) 4097)))))
 
 ;; The core exports page-aligned? and align-4k but no host wrapper existed
 ;; and no test covered either, so an unaligned-GPA refusal could drift.
