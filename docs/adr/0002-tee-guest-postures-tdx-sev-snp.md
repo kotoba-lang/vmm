@@ -30,7 +30,7 @@ the basic aarch64 API.
      reasons (map-gpa / io / get-quote / setup-event-notify) into actions.
    - SEV-SNP: capability agreement, an AmdSev OVMF image, CPUID
      Fn8000_001F SEV+SNP bits, the `SNP_LAUNCH_START` policy layout from AMD
-     56860 Rev. 1.59 (reserved bit 17 must be one; bits 63:25 must be zero),
+     56860 Rev. 1.59 (reserved bit 17 must be one; bits 63:26 must be zero),
      named rejection of every PSC error
      code, and guest-request size floor (400 bytes).
    The numbers pinned in tests are hand-computed from the Intel TDX module

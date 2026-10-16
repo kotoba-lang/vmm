@@ -8,7 +8,8 @@
             snp-policy-migrate-ma-bit snp-policy-debug-bit
             snp-policy-single-socket-bit snp-policy-cxl-allow-bit
             snp-policy-mem-aes-256-xts-bit snp-policy-rapl-dis-bit
-            snp-policy-ciphertext-hiding-dram-bit snp-policy-known-mask
+            snp-policy-ciphertext-hiding-dram-bit
+            snp-policy-page-swap-disable-bit snp-policy-known-mask
             quote-min-bytes tdx-report-min-bytes snp-report-min-bytes
             align-4k page-aligned? tdvf-range-base tdvf-range-size in-tdvf-range?
             snp-secrets-gpa snp-cpuid-gpa
@@ -87,9 +88,9 @@
 (defn snp-fw-bit [] :i64 2)             ;; bit 1: AmdSev OVMF present
 (defn snp-ovmf-bit [] :i64 2)           ;; alias of snp-fw-bit for callers
 
-;; SNP_LAUNCH_START Guest Policy (AMD 56860 Rev. 1.59, Table 10). KVM
+;; SNP_LAUNCH_START Guest Policy (AMD 56860 Rev. 1.59, Table 12). KVM
 ;; carries the policy word to firmware, which enforces the requested ABI
-;; version and feature policy. Bits 63:25 are reserved MBZ; bit 17 is
+;; version and feature policy. Bits 63:26 are reserved MBZ; bit 17 is
 ;; reserved but must be one.
 (defn snp-policy-abi-minor-mask [] :i64 255) ;; bits 7:0, ABI_MINOR
 (defn snp-policy-abi-major-mask [] :i64 65280) ;; bits 15:8, ABI_MAJOR
@@ -102,7 +103,8 @@
 (defn snp-policy-mem-aes-256-xts-bit [] :i64 4194304) ;; bit 22
 (defn snp-policy-rapl-dis-bit [] :i64 8388608) ;; bit 23
 (defn snp-policy-ciphertext-hiding-dram-bit [] :i64 16777216) ;; bit 24
-(defn snp-policy-known-mask [] :i64 33554431) ;; bits 24:0
+(defn snp-policy-page-swap-disable-bit [] :i64 33554432) ;; bit 25
+(defn snp-policy-known-mask [] :i64 67108863) ;; bits 25:0
 
 ;; ---------------------------------------------------------------------------
 ;; Attestation sizes -- the monitor refuses an unmeasurable quote path
@@ -302,8 +304,8 @@
                   (+ (tdx-admit) (tdx-tdvf-bit)))))
 
 (defn snp-policy-bounds [policy :i64] :i64
-  ;; Accept every field defined by AMD 56860 Rev. 1.59 (bits 24:0),
-  ;; reject reserved bits 63:25, and require reserved bit 17 to be one.
+  ;; Accept every field defined by AMD 56860 Rev. 1.59 (bits 25:0),
+  ;; reject reserved bits 63:26, and require reserved bit 17 to be one.
   ;; Firmware remains responsible for enforcing the requested ABI version
   ;; and feature support; this gate only validates the word's shape.
   ;;

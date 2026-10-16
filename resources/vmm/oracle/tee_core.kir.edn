@@ -145,11 +145,17 @@
    :effects #{},
    :body 16777216,
    :param-types []}
+  {:name snp-policy-page-swap-disable-bit,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 33554432,
+   :param-types []}
   {:name snp-policy-known-mask,
    :params [],
    :result :i64,
    :effects #{},
-   :body 33554431,
+   :body 67108863,
    :param-types []}
   {:name quote-min-bytes,
    :params [],
@@ -505,6 +511,7 @@
   snp-policy-mem-aes-256-xts-bit
   snp-policy-rapl-dis-bit
   snp-policy-ciphertext-hiding-dram-bit
+  snp-policy-page-swap-disable-bit
   snp-policy-known-mask
   quote-min-bytes
   tdx-report-min-bytes

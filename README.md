@@ -131,7 +131,7 @@ means. Two profiles:
   refused by name, not zero-filled) are decisions here.
 * **SEV-SNP** — launch admission requires the KVM SNP capability, the
   AmdSev OVMF image, the SEV/SNP CPUID bits, and a policy word matching
-  AMD 56860 Rev. 1.59: bits 63:25 are zero and reserved bit 17 is one.
+  AMD 56860 Rev. 1.59: bits 63:26 are zero and reserved bit 17 is one.
   The firmware enforces the requested ABI version and feature policy.
   Post-boot: page-state-change error codes refuse by name
   (not-page-aligned, not-shared, page-owned; an unknown code stays

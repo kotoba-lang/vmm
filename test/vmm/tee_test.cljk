@@ -74,7 +74,7 @@
            (:reason (tee/snp-launch (assoc snp-good :snp-bit 0)))))))
 
 (deftest refuses-snp-policy-bits-outside-the-mask
-  ;; AMD 56860 Rev. 1.59 defines fields through bit 24; bits 63:25 are
+  ;; AMD 56860 Rev. 1.59 defines fields through bit 25; bits 63:26 are
   ;; reserved MBZ. The gate checks that shape and the mandatory-one bit.
   (is (:ok? (tee/snp-launch snp-good)))
   (is (= "snp/policy-bits-outside-mask"
@@ -290,19 +290,19 @@
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 0))))
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor -4096)))))
 
-;; Every field in AMD 56860 Rev. 1.59's defined low 25 bits is accepted
+;; Every field in AMD 56860 Rev. 1.59's defined low 26 bits is accepted
 ;; alongside the mandatory-one bit; the first bit above that layout is MBZ.
 (deftest snp-policy-defined-fields-and-reserved-boundary
-  (doseq [bit [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 18 19 20 21 22 23 24]]
+  (doseq [bit [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 18 19 20 21 22 23 24 25]]
     (is (:ok? (tee/snp-launch
                (assoc snp-good :policy (+ 131072 (bit-shift-left 1 bit)))))))
-  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 131072 16777216))))
-      "bit 24 is the highest defined policy field")
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 131072 33554432))))
+      "bit 25 is the highest defined policy field")
   (is (= "snp/policy-bits-outside-mask"
-         (:reason (tee/snp-launch (assoc snp-good :policy (+ 131072 33554432)))))))
+         (:reason (tee/snp-launch (assoc snp-good :policy (+ 131072 67108864)))))))
 
 (deftest snp-policy-reserved-high-bits-refuse
-  (doseq [bit [25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43
+  (doseq [bit [26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43
                44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63]]
     (is (= "snp/policy-bits-outside-mask"
            (:reason (tee/snp-launch
