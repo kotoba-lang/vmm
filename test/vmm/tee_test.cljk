@@ -142,6 +142,15 @@
   (is (= "tdvmcall/map-gpa-size-unaligned"
          (:reason (tee/map-gpa (+ 0x1000 281474976710656) 4097)))))
 
+;; Page 0 as a MAP_GPA operand was never pinned: page-aligned? 0 is
+;; pinned, but the monitor's own path was not. Hand-computed from
+;; tee_core.kotoba tdx-tdvmcall-map-gpa: gpa 0 is 4K-aligned, size 4096
+;; is aligned and > 0, bit 48 clear -> ok, private half (value 1).
+(deftest map-gpa-page-zero-is-a-real-private-page
+  (let [d (tee/map-gpa 0 4096)]
+    (is (:ok? d))
+    (is (= 1 (small-kir-integer (:value d))))))
+
 ;; The core exports page-aligned? and align-4k but no host wrapper existed
 ;; and no test covered either, so an unaligned-GPA refusal could drift.
 ;; Expected verdicts are hand-computed: 0 is a real page; 4095 rounds up;
