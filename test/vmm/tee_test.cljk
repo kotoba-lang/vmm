@@ -138,7 +138,18 @@
   (is (= "tdvmcall/map-gpa-unaligned"
          (:reason (tee/map-gpa (+ 0x1001 281474976710656) 0x1000))))
   (is (= "tdvmcall/map-gpa-empty"
-         (:reason (tee/map-gpa (+ 0x1000 281474976710656) 0)))))
+         (:reason (tee/map-gpa (+ 0x1000 281474976710656) 0))))
+  (is (= "tdvmcall/map-gpa-size-unaligned"
+         (:reason (tee/map-gpa (+ 0x1000 281474976710656) 4097)))))
+
+;; Page 0 as a MAP_GPA operand was never pinned: page-aligned? 0 is
+;; pinned, but the monitor's own path was not. Hand-computed from
+;; tee_core.kotoba tdx-tdvmcall-map-gpa: gpa 0 is 4K-aligned, size 4096
+;; is aligned and > 0, bit 48 clear -> ok, private half (value 1).
+(deftest map-gpa-page-zero-is-a-real-private-page
+  (let [d (tee/map-gpa 0 4096)]
+    (is (:ok? d))
+    (is (= 1 (small-kir-integer (:value d))))))
 
 ;; The core exports page-aligned? and align-4k but no host wrapper existed
 ;; and no test covered either, so an unaligned-GPA refusal could drift.
@@ -222,6 +233,10 @@
     (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 -4)))))
   (testing "len 8 is beyond the largest encodable width"
     (is (= "portio/bad-width" (:reason (tee/portio 0x3F8 8)))))
+  (testing "len 8 is refused at the virtio BAR top edge, before the device map"
+    (is (= "portio/bad-width" (:reason (tee/portio 0x5FFF 8)))))
+  (testing "the word width len 2 is accepted one port below the BAR top edge"
+    (is (= :virtio (:device (tee/portio 0x5FFE 2)))))
   (testing "the width gate precedes the device map"
     ;; unmodeled port, but the width is what refuses it
     (is (= "portio/bad-width" (:reason (tee/portio 0x80 0))))))
@@ -238,7 +253,12 @@
     (is (tee/in-tdvf-range? base))
     (is (tee/in-tdvf-range? (+ base size -1)))
     (is (not (tee/in-tdvf-range? (+ base size))))
-    (is (not (tee/in-tdvf-range? (- base 1))))))
+    (is (not (tee/in-tdvf-range? (- base 1))))
+    ;; The window sits under 4G (OVMF-TDX reserves 0xFEC00000-8M for the
+    ;; flash area). A GPA at or above 4G, and a negative GPA, are outside
+    ;; the window and must never be folded in by an unsigned wrap-around.
+    (is (not (tee/in-tdvf-range? 4294967296)))   ;; 4G: first gpa past the window's ceiling region
+    (is (not (tee/in-tdvf-range? -1)))))
 
 (deftest snp-report-size-is-checked
   (testing "at exactly the minimum"
@@ -264,7 +284,12 @@
   (is (:ok? (tee/tdx-quote-floor 4096)))
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 4095))))
   ;; the first size past the floor is accepted, not rounded or re-floored
-  (is (let [d (tee/tdx-quote-floor 4097)] (and (:ok? d) (= 4097 (:size d))))))
+  (is (let [d (tee/tdx-quote-floor 4097)] (and (:ok? d) (= 4097 (:size d)))))
+  ;; A zero or negative buffer size takes the same below-minimum literal:
+  ;; the gate is (>= buf-size floor), so 0 and negative sizes must be
+  ;; refused as below-minimum, never wrapped around or reinterpreted.
+  (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 0))))
+  (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor -4096)))))
 
 ;; The known policy mask is 8 + 256 + 8388608 (AMD 24593: single-socket
 ;; bit 3, SMT bit 8, VMGEXIT bit 23). The edges 1, 2 and 2^24 are pinned
@@ -336,3 +361,16 @@
   (is (= "tdvmcall/unknown-page-kind" (:reason (tee/page-type -1))))
   (is (= "snp/report-size-below-minimum"
          (:reason (tee/snp-report-request -400)))))
+
+;; The portio gate compares ports against non-negative device windows
+;; only. A negative port number (e.g. -1) can never satisfy any
+;; (>= port ...) clause, so it must fall to the :else clause and be
+;; refused as portio/unmodeled-device -- never as portio/bad-width
+;; (the width 1 is legal) and never as a device hit. Port 0 with a
+;; legal width is likewise below every window and stays unmodeled.
+(deftest portio-negative-and-zero-port-stay-unmodeled
+  (is (= "portio/unmodeled-device" (:reason (tee/portio -1 1))))
+  (is (= "portio/unmodeled-device" (:reason (tee/portio -4096 4))))
+  (is (= "portio/unmodeled-device" (:reason (tee/portio 0 1))))
+  ;; with an illegal width the width gate still wins for a negative port
+  (is (= "portio/bad-width" (:reason (tee/portio -1 3)))))
