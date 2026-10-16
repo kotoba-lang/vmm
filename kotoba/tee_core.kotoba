@@ -3,7 +3,12 @@
             tdx-cpuid-adapter-bit page-size-4k
             tdx-refuse tdx-admit tdx-cvm-bit tdx-tdvf-bit
             snp-refuse snp-admit snp-cvm-bit snp-fw-bit snp-ovmf-bit
-            snp-policy-smt-bit snp-policy-single-socket-bit snp-policy-vmgexit-bit
+            snp-policy-abi-minor-mask snp-policy-abi-major-mask
+            snp-policy-smt-bit snp-policy-reserved-one-bit
+            snp-policy-migrate-ma-bit snp-policy-debug-bit
+            snp-policy-single-socket-bit snp-policy-cxl-allow-bit
+            snp-policy-mem-aes-256-xts-bit snp-policy-rapl-dis-bit
+            snp-policy-ciphertext-hiding-dram-bit snp-policy-known-mask
             quote-min-bytes tdx-report-min-bytes snp-report-min-bytes
             align-4k page-aligned? tdvf-range-base tdvf-range-size in-tdvf-range?
             snp-secrets-gpa snp-cpuid-gpa
@@ -21,8 +26,9 @@
 ;;     section on TDVMCALL, and the Linux x86 cc (CoCo) guest code
 ;;     `arch/x86/coco/tdx/tdx.c`, which I read this session for the exact
 ;;     TDG.VP.VMCALL operands and the CPUID indirect-leaf adapter bit.
-;;   * AMD SEV-SNP: AMD 24593--rev0.35, the Linux guest code
-;;     `arch/x86/coco/sev-guest.c` and `arch/x86/mm/sev.c` (snp_msg_req,
+;;   * AMD SEV-SNP policy: AMD 56860 Rev. 1.59 (Guest Policy Structure);
+;;     AMD 24593 Rev. 3.44 and the Linux guest code `arch/x86/coco/sev-guest.c`
+;;     and `arch/x86/mm/sev.c` (snp_msg_req,
 ;;     GHCB page-assignment (PSC), and the SNP CPUID page), and OVMF's
 ;;     AmdSev platform profile.
 ;;
@@ -81,10 +87,22 @@
 (defn snp-fw-bit [] :i64 2)             ;; bit 1: AmdSev OVMF present
 (defn snp-ovmf-bit [] :i64 2)           ;; alias of snp-fw-bit for callers
 
-;; SNP_LAUNCH_START policy bits (AMD 24593 table; KVM ioctls carry them):
-(defn snp-policy-smt-bit [] :i64 256)          ;; SMT allowed (vTOM shape)
-(defn snp-policy-single-socket-bit [] :i64 8)  ;; single-socket only
-(defn snp-policy-vmgexit-bit [] :i64 8388608)  ;; VMGEXIT required
+;; SNP_LAUNCH_START Guest Policy (AMD 56860 Rev. 1.59, Table 10). KVM
+;; carries the policy word to firmware, which enforces the requested ABI
+;; version and feature policy. Bits 63:25 are reserved MBZ; bit 17 is
+;; reserved but must be one.
+(defn snp-policy-abi-minor-mask [] :i64 255) ;; bits 7:0, ABI_MINOR
+(defn snp-policy-abi-major-mask [] :i64 65280) ;; bits 15:8, ABI_MAJOR
+(defn snp-policy-smt-bit [] :i64 65536) ;; bit 16
+(defn snp-policy-reserved-one-bit [] :i64 131072) ;; bit 17, must be one
+(defn snp-policy-migrate-ma-bit [] :i64 262144) ;; bit 18
+(defn snp-policy-debug-bit [] :i64 524288) ;; bit 19
+(defn snp-policy-single-socket-bit [] :i64 1048576) ;; bit 20
+(defn snp-policy-cxl-allow-bit [] :i64 2097152) ;; bit 21
+(defn snp-policy-mem-aes-256-xts-bit [] :i64 4194304) ;; bit 22
+(defn snp-policy-rapl-dis-bit [] :i64 8388608) ;; bit 23
+(defn snp-policy-ciphertext-hiding-dram-bit [] :i64 16777216) ;; bit 24
+(defn snp-policy-known-mask [] :i64 33554431) ;; bits 24:0
 
 ;; ---------------------------------------------------------------------------
 ;; Attestation sizes -- the monitor refuses an unmeasurable quote path
@@ -284,27 +302,18 @@
                   (+ (tdx-admit) (tdx-tdvf-bit)))))
 
 (defn snp-policy-bounds [policy :i64] :i64
-  ;; The policy word must be a legal SNP_LAUNCH_START policy: bits outside
-  ;; the documented mask (SMT 8, single-socket 3, VMGEXIT 23) mean a
-  ;; caller invented bits the firmware will not honour. The test is
-  ;; The predicate is `policy AND (NOT known) == 0` in intent -- any bit
-  ;; outside the mask fails, every subset passes. Written as the
-  ;; bit-not-free identity `policy == policy AND known` because the KIR
-  ;; interpreter's bit-not through an i64 negative intermediate measured
-  ;; wrong under the cljs runtime (policy 0 refused), while the JVM
-  ;; measured right -- the same JVM/cljs asymmetry class the exit tests
-  ;; pin, and this formulation has no negative intermediate to expose.
+  ;; Accept every field defined by AMD 56860 Rev. 1.59 (bits 24:0),
+  ;; reject reserved bits 63:25, and require reserved bit 17 to be one.
+  ;; Firmware remains responsible for enforcing the requested ABI version
+  ;; and feature support; this gate only validates the word's shape.
   ;;
-  ;; The answer is 1/0, not a :bool. The KIR comparison ops return i64
-  ;; (measured against the cljs interpreter this session: a :bool fn
-  ;; whose body tails with a comparison traps :value-type-mismatch under
-  ;; kbb, while the JVM's Boolean slides through -- a JVM/cljs asymmetry
-  ;; that would make this gate JVM-green and kbb-red). A helper returning
-  ;; i64 keeps both runtimes on one verdict.
-  (let [known (+ (snp-policy-smt-bit)
-                 (snp-policy-single-socket-bit)
-                 (snp-policy-vmgexit-bit))]
-    (if (= policy (bit-and policy known)) 1 0)))
+  ;; Return 1/0, not a :bool: KIR comparison ops return i64 and the caller
+  ;; consumes the same integer verdict on every supported runtime.
+  (let [known (snp-policy-known-mask)
+        required-one (snp-policy-reserved-one-bit)]
+    (if (= policy (bit-and policy known))
+      (if (= (bit-and policy required-one) required-one) 1 0)
+      0)))
 
 (defn admit-snp-guest [kvm-snp-ok :i64 ovmf-present :i64 cpu-sev-bit :i64
                        snp-bit :i64 policy :i64]

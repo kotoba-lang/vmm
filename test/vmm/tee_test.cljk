@@ -2,7 +2,8 @@
   "The TDX and SEV-SNP launch decisions, and every reason they refuse.
 
   Expected verdicts are computed by hand from the TDX module spec and
-  AMD 24593, not by calling the code under test. Each negative case pins
+  AMD 56860 (SEV-SNP) and AMD 24593, not by calling the code under test.
+  Each negative case pins
   the reason literal: a test that only asserts `:ok? false` passes when
   the admission fails for a different reason than the one it claims to
   be about."
@@ -49,7 +50,8 @@
 ;; SEV-SNP launch
 
 (def snp-good
-  {:kvm-snp-ok 1 :ovmf-present 1 :cpu-sev-bit 1 :snp-bit 1 :policy 256})
+  ;; ABI_MAJOR=1 (bit 8) plus reserved bit 17, which AMD requires to be one.
+  {:kvm-snp-ok 1 :ovmf-present 1 :cpu-sev-bit 1 :snp-bit 1 :policy 131328})
 
 (deftest admits-a-complete-snp-platform
   (let [d (tee/snp-launch snp-good)]
@@ -72,20 +74,17 @@
            (:reason (tee/snp-launch (assoc snp-good :snp-bit 0)))))))
 
 (deftest refuses-snp-policy-bits-outside-the-mask
-  ;; SMT=8 | single-socket=0 | vmgexit=0 -> 256 is legal. A policy with a
-  ;; bit the firmware will not honour (e.g. 1) is refused, never passed
-  ;; through to the ioctl.
+  ;; AMD 56860 Rev. 1.59 defines fields through bit 24; bits 63:25 are
+  ;; reserved MBZ. The gate checks that shape and the mandatory-one bit.
   (is (:ok? (tee/snp-launch snp-good)))
   (is (= "snp/policy-bits-outside-mask"
-         (:reason (tee/snp-launch (assoc snp-good :policy 1)))))
-  ;; policy 0 is LEGAL, not refused: SNP_LAUNCH_START with all optional
-  ;; bits clear (SMT off, single-socket off, no VMGEXIT) is the default
-  ;; launch. Refusing it would break the launch the firmware accepts.
-  (is (:ok? (tee/snp-launch (assoc snp-good :policy 0))))
-  ;; a word with a genuinely invented bit (SMT bit + a bogus 2^40) is
-  ;; refused by name.
+         (:reason (tee/snp-launch (assoc snp-good :policy 0)))))
+  ;; The mandatory reserved bit must remain one even when optional fields
+  ;; and the ABI version are otherwise clear.
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy 131072))))
+  ;; A genuinely reserved bit outside the current policy layout is refused.
   (is (= "snp/policy-bits-outside-mask"
-         (:reason (tee/snp-launch (assoc snp-good :policy (+ 8 1099511627776)))))))
+         (:reason (tee/snp-launch (assoc snp-good :policy (+ 131328 33554432)))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Launch variant
@@ -291,23 +290,23 @@
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor 0))))
   (is (= "tdx/quote-buffer-below-minimum" (:reason (tee/tdx-quote-floor -4096)))))
 
-;; The known policy mask is 8 + 256 + 8388608 (AMD 24593: single-socket
-;; bit 3, SMT bit 8, VMGEXIT bit 23). The edges 1, 2 and 2^24 are pinned
-;; above; pin that EVERY single undocumented bit below bit 24 refuses on
-;; its own, so no gap between the named bits can slide through the mask
-;; gate as a legal word.
-(deftest snp-policy-mask-each-undocumented-single-bit-refuses
-  (doseq [bit [0 1 2 4 5 6 7 9 10 11 12 13 14 15 16 17 18 19 20 21 22]]
-    (is (= "snp/policy-bits-outside-mask"
-           (:reason (tee/snp-launch (assoc snp-good :policy (bit-shift-left 1 bit))))))))
-
-;; The top of the documented policy mask (VMGEXIT, bit 23 = 0x800000) is still
-;; inside the mask; the first bit past it (0x1000000) is not. AMD 24593: the
-;; policy word carries SMT (bit 8), single-socket (bit 3), VMGEXIT (bit 23).
-(deftest snp-policy-mask-top-bit-boundary
-  (is (:ok? (tee/snp-launch (assoc snp-good :policy 8388608))))
+;; Every field in AMD 56860 Rev. 1.59's defined low 25 bits is accepted
+;; alongside the mandatory-one bit; the first bit above that layout is MBZ.
+(deftest snp-policy-defined-fields-and-reserved-boundary
+  (doseq [bit [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 18 19 20 21 22 23 24]]
+    (is (:ok? (tee/snp-launch
+               (assoc snp-good :policy (+ 131072 (bit-shift-left 1 bit)))))))
+  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 131072 16777216))))
+      "bit 24 is the highest defined policy field")
   (is (= "snp/policy-bits-outside-mask"
-         (:reason (tee/snp-launch (assoc snp-good :policy 16777216))))))
+         (:reason (tee/snp-launch (assoc snp-good :policy (+ 131072 33554432)))))))
+
+(deftest snp-policy-reserved-high-bits-refuse
+  (doseq [bit [25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43
+               44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63]]
+    (is (= "snp/policy-bits-outside-mask"
+           (:reason (tee/snp-launch
+                     (assoc snp-good :policy (+ 131072 (bit-shift-left 1 bit)))))))))
 
 (deftest psc-reserved-gap-interior-stays-unknown
   ;; AMD 24593 table 65 codes 10..14 sit inside the reserved gap. Only the
@@ -327,21 +326,6 @@
 (deftest psc-unknown-code-ceiling-stays-unknown
   (is (= :snp/psc-unknown-code (:err (tee/psc-err 18))))
   (is (= :snp/psc-unknown-code (:err (tee/psc-err 255)))))
-;; The single-socket bit (bit 3 = 8) was never pinned alone, and neither
-;; was any combination of the three legal mask bits. snp-policy-bounds is
-;; "every subset passes" in intent -- the mask test must hold for each
-;; subset of {SMT 256, single-socket 8, VMGEXIT 8388608}, not only the
-;; lone and full bits already pinned. The next invented bit past the
-;; refusals already pinned (bit 0, 2^40) is bit 1 (2); it stays outside.
-(deftest snp-policy-mask-single-socket-and-subsets
-  (is (:ok? (tee/snp-launch (assoc snp-good :policy 8))))
-  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 8 256)))))
-  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 8 8388608)))))
-  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 256 8388608)))))
-  (is (:ok? (tee/snp-launch (assoc snp-good :policy (+ 8 256 8388608)))))
-  (is (= "snp/policy-bits-outside-mask"
-         (:reason (tee/snp-launch (assoc snp-good :policy 2))))))
-
 ;; The GPCM page kinds TDH.MEM.* accepts are only 1 (private, encrypted)
 ;; and 2 (shared). A caller passing 0 (the uninitialised value) or 3 (the
 ;; first kind past the documented pair) is refused by name -- the
