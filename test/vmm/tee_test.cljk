@@ -326,3 +326,16 @@
   (is (= "tdvmcall/unknown-page-kind" (:reason (tee/page-type -1))))
   (is (= "snp/report-size-below-minimum"
          (:reason (tee/snp-report-request -400)))))
+
+;; The portio gate compares ports against non-negative device windows
+;; only. A negative port number (e.g. -1) can never satisfy any
+;; (>= port ...) clause, so it must fall to the :else clause and be
+;; refused as portio/unmodeled-device -- never as portio/bad-width
+;; (the width 1 is legal) and never as a device hit. Port 0 with a
+;; legal width is likewise below every window and stays unmodeled.
+(deftest portio-negative-and-zero-port-stay-unmodeled
+  (is (= "portio/unmodeled-device" (:reason (tee/portio -1 1))))
+  (is (= "portio/unmodeled-device" (:reason (tee/portio -4096 4))))
+  (is (= "portio/unmodeled-device" (:reason (tee/portio 0 1))))
+  ;; with an illegal width the width gate still wins for a negative port
+  (is (= "portio/bad-width" (:reason (tee/portio -1 3)))))
