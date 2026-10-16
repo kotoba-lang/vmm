@@ -29,11 +29,13 @@ the basic aarch64 API.
      indirect-adapter bit, and post-boot translation of TDG.VP.VMCALL exit
      reasons (map-gpa / io / get-quote / setup-event-notify) into actions.
    - SEV-SNP: capability agreement, an AmdSev OVMF image, CPUID
-     Fn8000_001F SEV+SNP bits, the `SNP_LAUNCH_START` policy mask (policy 0
-     is legal — every optional bit off), named rejection of every PSC error
+     Fn8000_001F SEV+SNP bits, the `SNP_LAUNCH_START` policy layout from AMD
+     56860 Rev. 1.59 (reserved bit 17 must be one; bits 63:26 must be zero),
+     named rejection of every PSC error
      code, and guest-request size floor (400 bytes).
    The numbers pinned in tests are hand-computed from the Intel TDX module
-   spec and AMD 24593, with rejection-reason literals pinned verbatim.
+   spec, AMD 56860 and AMD 24593, with rejection-reason literals pinned
+   verbatim.
 
 2. **The mechanism boundary is unchanged.** `src/vmm/tee.cljk` normalises
    KIR values and calls the oracle; it does not contain judgements. The

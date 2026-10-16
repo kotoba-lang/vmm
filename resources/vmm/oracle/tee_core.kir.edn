@@ -79,23 +79,83 @@
    :effects #{},
    :body 2,
    :param-types []}
+  {:name snp-policy-abi-minor-mask,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 255,
+   :param-types []}
+  {:name snp-policy-abi-major-mask,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 65280,
+   :param-types []}
   {:name snp-policy-smt-bit,
    :params [],
    :result :i64,
    :effects #{},
-   :body 256,
+   :body 65536,
+   :param-types []}
+  {:name snp-policy-reserved-one-bit,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 131072,
+   :param-types []}
+  {:name snp-policy-migrate-ma-bit,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 262144,
+   :param-types []}
+  {:name snp-policy-debug-bit,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 524288,
    :param-types []}
   {:name snp-policy-single-socket-bit,
    :params [],
    :result :i64,
    :effects #{},
-   :body 8,
+   :body 1048576,
    :param-types []}
-  {:name snp-policy-vmgexit-bit,
+  {:name snp-policy-cxl-allow-bit,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 2097152,
+   :param-types []}
+  {:name snp-policy-mem-aes-256-xts-bit,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 4194304,
+   :param-types []}
+  {:name snp-policy-rapl-dis-bit,
    :params [],
    :result :i64,
    :effects #{},
    :body 8388608,
+   :param-types []}
+  {:name snp-policy-ciphertext-hiding-dram-bit,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 16777216,
+   :param-types []}
+  {:name snp-policy-page-swap-disable-bit,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 33554432,
+   :param-types []}
+  {:name snp-policy-known-mask,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 67108863,
    :param-types []}
   {:name quote-min-bytes,
    :params [],
@@ -360,12 +420,12 @@
    :effects #{},
    :body
    (let
-    [known
-     (+
-      (snp-policy-smt-bit)
-      (snp-policy-single-socket-bit)
-      (snp-policy-vmgexit-bit))]
-    (if (= policy (bit-and policy known)) 1 0)),
+    [known (snp-policy-known-mask)
+     required-one (snp-policy-reserved-one-bit)]
+    (if
+     (= policy (bit-and policy known))
+     (if (= (bit-and policy required-one) required-one) 1 0)
+     0)),
    :param-types [:i64]}
   {:name admit-snp-guest,
    :params [kvm-snp-ok ovmf-present cpu-sev-bit snp-bit policy],
@@ -440,9 +500,19 @@
   snp-cvm-bit
   snp-fw-bit
   snp-ovmf-bit
+  snp-policy-abi-minor-mask
+  snp-policy-abi-major-mask
   snp-policy-smt-bit
+  snp-policy-reserved-one-bit
+  snp-policy-migrate-ma-bit
+  snp-policy-debug-bit
   snp-policy-single-socket-bit
-  snp-policy-vmgexit-bit
+  snp-policy-cxl-allow-bit
+  snp-policy-mem-aes-256-xts-bit
+  snp-policy-rapl-dis-bit
+  snp-policy-ciphertext-hiding-dram-bit
+  snp-policy-page-swap-disable-bit
+  snp-policy-known-mask
   quote-min-bytes
   tdx-report-min-bytes
   snp-report-min-bytes

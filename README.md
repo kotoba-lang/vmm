@@ -130,9 +130,10 @@ means. Two profiles:
   split, and the port-I/O device model (serial, virtio; everything else is
   refused by name, not zero-filled) are decisions here.
 * **SEV-SNP** — launch admission requires the KVM SNP capability, the
-  AmdSev OVMF image, the SEV/SNP CPUID bits, and a policy word whose bits
-  sit inside the SNP_LAUNCH_START mask (policy 0 is legal: all optional
-  bits off). Post-boot: page-state-change error codes refuse by name
+  AmdSev OVMF image, the SEV/SNP CPUID bits, and a policy word matching
+  AMD 56860 Rev. 1.59: bits 63:26 are zero and reserved bit 17 is one.
+  The firmware enforces the requested ABI version and feature policy.
+  Post-boot: page-state-change error codes refuse by name
   (not-page-aligned, not-shared, page-owned; an unknown code stays
   unknown), and the guest-request report path refuses a declared size
   below the 400-byte fixed report body.
