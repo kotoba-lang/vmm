@@ -17,8 +17,8 @@
    :uart-size 4096
    :gicd-base 134217728      ;; 0x08000000
    :gicd-size 65536
-   :gicr-base 134742016      ;; 0x080a0000
-   :gicr-size 1007616        ;; 0xf6000
+   :gicr-base 134873088      ;; 0x080a0000
+   :gicr-size 16121856       ;; 0xf60000, QEMU virt redistributor window
    :virtio-base 167772160    ;; 0x0a000000, exit-core's virtio window
    :virtio-stride 512
    :virtio-count 32})
