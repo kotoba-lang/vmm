@@ -196,8 +196,8 @@
   admit-image
   admit-kernel
   admit-dtb
-  admit-initrd],
- :schemas nil,
- :effects #{},
- :blocks [],
+  admit-initrd], 
+ :schemas nil, 
+ :effects #{}, 
+ :blocks [], 
  :entry nil}

@@ -27,4 +27,4 @@
       (is (io/exists? (io/file out)) (str out " is missing"))
       (is (= (gen/compile-kir source)
              (edn/read-string (slurp out)))
-          (str out " is stale -- run `kbb -M:test:gen`")))))
+          (str out " is stale -- run `kbb -M:gen`")))))

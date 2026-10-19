@@ -240,8 +240,8 @@
   classify
   device-offset
   virtio-index
-  psci-action],
- :schemas nil,
- :effects #{},
- :blocks [],
+  psci-action], 
+ :schemas nil, 
+ :effects #{}, 
+ :blocks [], 
  :entry nil}
