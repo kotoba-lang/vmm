@@ -17,8 +17,8 @@
    :uart-size 4096
    :gicd-base 134217728      ;; 0x08000000
    :gicd-size 65536
-   :gicr-base 134742016      ;; 0x080a0000
-   :gicr-size 1007616        ;; 0xf6000
+   :gicr-base 134873088      ;; 0x080a0000
+   :gicr-size 16121856       ;; 0xf60000, QEMU virt redistributor window
    :virtio-base 167772160    ;; 0x0a000000, exit-core's virtio window
    :virtio-stride 512
    :virtio-count 32})
@@ -106,6 +106,7 @@
            (vec begins))
         "node order and unit-addresses follow the template")
     (is (= (concat [["#address-cells" 4] ["#size-cells" 4]
+                    ["interrupt-parent" 4]
                     ["bootargs" (+ 1 (count (:bootargs plan-map)))]
                     ["linux,initrd-start" 8] ["linux,initrd-end" 8]
                     ["device_type" 7] ["reg" 16]
@@ -115,7 +116,8 @@
                     ["compatible" 13] ["method" 4]
                     ["compatible" 11] ["#interrupt-cells" 4]
                     ["interrupt-controller" 0] ["reg" 32] ["phandle" 4]
-                    ["compatible" 16] ["always-on" 0] ["interrupts" 48]
+                    ["#redistributor-regions" 4]
+                    ["compatible" 32] ["always-on" 0] ["interrupts" 48]
                     ["compatible" 10] ["reg" 16] ["interrupts" 12]]
                    (apply concat
                           (repeat 32 [["compatible" 12] ["reg" 16]
@@ -123,9 +125,9 @@
            (vec props))
         "every property name resolves in the strings block with the planned width")
     (testing "the values a guest boots from"
-      ;; chosen starts after root's 8 name bytes and two 16-byte props;
+      ;; chosen starts after root's 8 name bytes and three 16-byte props;
       ;; inside it: 12 name bytes, then each prop's 12-byte header.
-      (let [cs (+ off 40)]
+      (let [cs (+ off 56)]
         (is (= (:bootargs plan-map)
                (cstr bytes (+ cs 24))))
         (is (= 1140850688 (u64 bytes (+ cs 80))))

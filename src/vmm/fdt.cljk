@@ -78,11 +78,14 @@
         s-phand (c :str-phandle [])
         s-ints (c :str-interrupts [])
         s-aon (c :str-always-on [])
+        s-rdis (c :str-redistributor-regions [])
+        s-ipar (c :str-interrupt-parent [])
         begin (fn [nm] (into (be32 1) (name-bytes nm)))
         end (be32 2)
         nodes
         [(begin "")
          (prop-u32 s-addr 2) (prop-u32 s-size 2)
+         (prop-u32 s-ipar 1)
          (begin "chosen")
          (prop-str s-boot (str bootargs "\u0000"))
          (prop-u64 s-ird0 initrd-start) (prop-u64 s-ird1 initrd-end)
@@ -111,9 +114,10 @@
          (prop-bytes s-reg (into (into (be64 gicd-base) (be64 gicd-size))
                                  (into (be64 gicr-base) (be64 gicr-size))))
          (prop-u32 s-phand 1)
+         (prop-u32 s-rdis 1)
          end
          (begin "timer")
-         (prop-str s-comp "arm,armv8-timer\u0000")
+         (prop-str s-comp "arm,armv8-timer\u0000arm,armv7-timer\u0000")
          (prop-empty s-aon)
          (prop-bytes s-ints (into [] (mapcat be32 [1 13 4 1 14 4 1 11 4 1 10 4])))
          end
@@ -144,7 +148,8 @@
   (let [names ["#address-cells" "#size-cells" "device_type" "reg" "bootargs"
                "linux,initrd-start" "linux,initrd-end" "compatible"
                "enable-method" "method" "#interrupt-cells"
-               "interrupt-controller" "phandle" "interrupts" "always-on"]]
+               "interrupt-controller" "phandle" "interrupts" "always-on"
+               "#redistributor-regions" "interrupt-parent"]]
     (into [] (mapcat #(conj (utf8-bytes %) 0) names))))
 
 (defn plan

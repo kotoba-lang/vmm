@@ -1,0 +1,33 @@
+;; Build one DTB through vmm.fdt/build for the boot-evidence run on
+;; murakumo-ci-6600hs, and write it to a file. Scratch script (target/).
+(require '[nbb.classpath :as ncp])
+(ncp/add-classpath "src")
+(ncp/add-classpath "resources")
+(ncp/add-classpath "/Users/junkawasaki/.gitlibs/libs/io.github.kotoba-lang/osaho/502b5bac814ee4b9aec003d2520d23e0347680b8/src")
+(ncp/add-classpath "/Users/junkawasaki/.gitlibs/libs/io.github.kotoba-lang/kotoba-hir/6f58c1aa9925d8b4b9221837dba776a99758fdcd/src")
+(ncp/add-classpath "/Users/junkawasaki/.gitlibs/libs/io.github.kotoba-lang/org-nist-sha2/3b4f7e93eff2c438c758383bab440b6f35627e31/src")
+(require '[vmm.fdt :as fdt])
+
+(def bootargs "console=ttyAMA0 earlycon=pl011,0x09000000 root=/dev/ram VMM_FDT_MARKER_20261019")
+
+(def pm {:bootargs bootargs
+         :ram-base 1073741824      ;; 0x40000000
+         :ram-size 1073741824      ;; 1 GiB
+         :initrd-start 0
+         :initrd-end 0
+         :uart-base 150994944
+         :uart-size 4096
+         :gicd-base 134217728
+         :gicd-size 65536
+         :gicr-base 134742016
+         :gicr-size 16121856
+         :virtio-base 167772160
+         :virtio-stride 512
+         :virtio-count 4})
+
+(let [{:keys [ok? bytes plan] :as out} (fdt/build pm)]
+  (println :ok ok? :totalsize (:totalsize plan))
+  (when ok?
+    (.writeFileSync (js/require "fs") "target/vmm-evidence.dtb"
+                    (js/Buffer.from (clj->js bytes)))
+    (println :wrote "target/vmm-evidence.dtb" :bytes (count bytes))))

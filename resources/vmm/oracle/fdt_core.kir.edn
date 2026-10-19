@@ -139,11 +139,23 @@
    :effects #{},
    :body 177,
    :param-types []}
-  {:name size-dt-strings,
+  {:name str-redistributor-regions,
    :params [],
    :result :i64,
    :effects #{},
    :body 187,
+   :param-types []}
+  {:name str-interrupt-parent,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 210,
+   :param-types []}
+  {:name size-dt-strings,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 227,
    :param-types []}
   {:name name-words,
    :params [chars],
@@ -183,7 +195,7 @@
    :params [],
    :result :i64,
    :effects #{},
-   :body 11,
+   :body 15,
    :param-types []}
   {:name struct-words-chosen,
    :params [bootargs-bytes],
@@ -219,13 +231,13 @@
    :params [],
    :result :i64,
    :effects #{},
-   :body 32,
+   :body 36,
    :param-types []}
   {:name struct-words-timer,
    :params [],
    :result :i64,
    :effects #{},
-   :body 29,
+   :body 33,
    :param-types []}
   {:name struct-words-pl011,
    :params [],
@@ -386,6 +398,8 @@
   str-phandle
   str-interrupts
   str-always-on
+  str-redistributor-regions
+  str-interrupt-parent
   hex-digits
   name-words
   struct-words-root

@@ -5,8 +5,9 @@
             str-address-cells str-size-cells str-device-type str-reg
             str-bootargs str-initrd-start str-initrd-end str-compatible
             str-enable-method str-method str-interrupt-cells
-            str-interrupt-controller str-phandle str-interrupts
-            str-always-on
+            str-interrupt-controller            str-phandle str-interrupts
+            str-always-on str-redistributor-regions
+            str-interrupt-parent
             hex-digits name-words
             struct-words-root struct-words-chosen struct-words-memory
             struct-words-cpus struct-words-cpu struct-words-psci
@@ -80,8 +81,10 @@
 (defn str-phandle [] :i64 158)          ;; "phandle\0"              8 bytes
 (defn str-interrupts [] :i64 166)       ;; "interrupts\0"          11 bytes
 (defn str-always-on [] :i64 177)        ;; "always-on\0"           10 bytes
+(defn str-redistributor-regions [] :i64 187) ;; "#redistributor-regions\0" 23 bytes
+(defn str-interrupt-parent [] :i64 210)  ;; "interrupt-parent\0"     17 bytes
 
-(defn size-dt-strings [] :i64 187)
+(defn size-dt-strings [] :i64 227)
 
 ;; ---------------------------------------------------------------------------
 ;; Name widths. A node name is NUL-terminated and padded to 4 bytes.
@@ -128,8 +131,11 @@
 
 (defn struct-words-root [] :i64
   ;; BEGIN_NODE "" (2) + #address-cells prop (4) + #size-cells prop (4)
-  ;; + the root's END_NODE (1).
-  11)
+  ;; + interrupt-parent prop (4) + the root's END_NODE (1). The
+  ;; interrupt-parent property is what resolves the timer's PPIs (measured
+  ;; 2026-10-19: without it `arch_timer: No interrupt available` and the
+  ;; guest loses its tick source).
+  15)
 
 (defn struct-words-chosen [bootargs-bytes :i64] :i64
   ;; BEGIN_NODE "chosen" (3) + bootargs prop (3 + value) + initrd-start
@@ -161,14 +167,18 @@
 (defn struct-words-intc [] :i64
   ;; BEGIN_NODE "intc" (3) + compatible="arm,gic-v3" (6)
   ;; + #interrupt-cells (4) + interrupt-controller empty (3)
-  ;; + reg of four u64 (11) + phandle (4) + END_NODE (1).
-  32)
+  ;; + reg of four u64 (11) + phandle (4) + #redistributor-regions (4)
+  ;; + END_NODE (1). The redistributor-regions property is what makes the
+  ;; kernel walk GICR frames (measured 2026-10-19: without it CPU0 reports
+  ;; "has no re-distributor" and the guest panics at the idle task).
+  36)
 
 (defn struct-words-timer [] :i64
-  ;; BEGIN_NODE "timer" (3) + compatible="arm,armv8-timer" (7)
-  ;; + always-on (3) + interrupts of 4 PPIs, 3 cells each (15)
-  ;; + END_NODE (1).
-  29)
+  ;; BEGIN_NODE "timer" (3) + compatible="arm,armv8-timer\0arm,armv7-timer\0"
+  ;; (8 value words -> 11) + always-on (3) + interrupts of 4 PPIs, 3 cells
+  ;; each (15) + END_NODE (1). The double string is QEMU `virt`'s own
+  ;; compatible list (dumpdtb-measured 2026-10-19).
+  33)
 
 (defn struct-words-pl011 [] :i64
   ;; BEGIN_NODE "pl011" (3) + compatible="arm,pl011" (6)
