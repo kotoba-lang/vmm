@@ -126,7 +126,7 @@
       ;; chosen starts after root's 8 name bytes and two 16-byte props;
       ;; inside it: 12 name bytes, then each prop's 12-byte header.
       (let [cs (+ off 40)]
-        (is (= (str (:bootargs plan-map) "\u0000")
+        (is (= (:bootargs plan-map)
                (cstr bytes (+ cs 24))))
         (is (= 1140850688 (u64 bytes (+ cs 80))))
         (is (= 1149239296 (u64 bytes (+ cs 100))))))))

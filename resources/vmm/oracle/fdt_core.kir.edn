@@ -149,7 +149,7 @@
    :params [chars],
    :result :i64,
    :effects #{},
-   :body (quot (+ chars 4) 4),
+   :body (+ 1 (quot (+ chars 4) 4)),
    :param-types [:i64]}
   {:name hex-digits,
    :params [x],
@@ -183,13 +183,13 @@
    :params [],
    :result :i64,
    :effects #{},
-   :body 10,
+   :body 11,
    :param-types []}
   {:name struct-words-chosen,
    :params [bootargs-bytes],
    :result :i64,
    :effects #{},
-   :body (+ 16 (words-bootargs bootargs-bytes)),
+   :body (+ 17 (words-bootargs bootargs-bytes)),
    :param-types [:i64]}
   {:name struct-words-memory,
    :params [ram-base],
@@ -201,37 +201,37 @@
    :params [],
    :result :i64,
    :effects #{},
-   :body 11,
+   :body 12,
    :param-types []}
   {:name struct-words-cpu,
    :params [],
    :result :i64,
    :effects #{},
-   :body 21,
+   :body 22,
    :param-types []}
   {:name struct-words-psci,
    :params [],
    :result :i64,
    :effects #{},
-   :body 14,
+   :body 15,
    :param-types []}
   {:name struct-words-intc,
    :params [],
    :result :i64,
    :effects #{},
-   :body 31,
+   :body 32,
    :param-types []}
   {:name struct-words-timer,
    :params [],
    :result :i64,
    :effects #{},
-   :body 28,
+   :body 29,
    :param-types []}
   {:name struct-words-pl011,
    :params [],
    :result :i64,
    :effects #{},
-   :body 22,
+   :body 23,
    :param-types []}
   {:name struct-words-virtio,
    :params [virtio-name-digits],
@@ -308,7 +308,7 @@
    :effects #{},
    :body
    (if
-    (< bootargs-bytes 1)
+    (< bootargs-bytes 2)
     (result-err-of [:result :i64 :string] "fdt/bootargs-empty")
     (result-ok-of [:result :i64 :string] bootargs-bytes)),
    :param-types [:i64]}
