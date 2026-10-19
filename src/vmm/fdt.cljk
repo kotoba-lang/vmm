@@ -80,6 +80,11 @@
         s-aon (c :str-always-on [])
         s-rdis (c :str-redistributor-regions [])
         s-ipar (c :str-interrupt-parent [])
+        s-clks (c :str-clocks [])
+        s-cnames (c :str-clock-names [])
+        s-cfreq (c :str-clock-frequency [])
+        s-ccells (c :str-clock-cells [])
+        s-spath (c :str-stdout-path [])
         begin (fn [nm] (into (be32 1) (name-bytes nm)))
         end (be32 2)
         nodes
@@ -89,6 +94,7 @@
          (begin "chosen")
          (prop-str s-boot (str bootargs "\u0000"))
          (prop-u64 s-ird0 initrd-start) (prop-u64 s-ird1 initrd-end)
+         (prop-str s-spath "/pl011\u0000")
          end
          (begin (str "memory@" (hex ram-base)))
          (prop-str s-dtyp "memory\u0000")
@@ -121,8 +127,16 @@
          (prop-empty s-aon)
          (prop-bytes s-ints (into [] (mapcat be32 [1 13 4 1 14 4 1 11 4 1 10 4])))
          end
+         (begin "apb-pclk")
+         (prop-str s-comp "fixed-clock\u0000")
+         (prop-u32 s-ccells 0)
+         (prop-u32 s-cfreq 24000000)
+         (prop-u32 s-phand 2)
+         end
          (begin "pl011")
-         (prop-str s-comp "arm,pl011\u0000")
+         (prop-str s-comp "arm,pl011\u0000arm,primecell\u0000")
+         (prop-str s-cnames "uartclk\u0000apb_pclk\u0000")
+         (prop-bytes s-clks (into (be32 2) (be32 2)))
          (prop-bytes s-reg (into (be64 uart-base) (be64 uart-size)))
          (prop-bytes s-ints (into [] (mapcat be32 [0 1 4])))
          end]]
@@ -149,7 +163,8 @@
                "linux,initrd-start" "linux,initrd-end" "compatible"
                "enable-method" "method" "#interrupt-cells"
                "interrupt-controller" "phandle" "interrupts" "always-on"
-               "#redistributor-regions" "interrupt-parent"]]
+               "#redistributor-regions" "interrupt-parent" "clocks"
+               "clock-names" "clock-frequency" "#clock-cells" "stdout-path"]]
     (into [] (mapcat #(conj (utf8-bytes %) 0) names))))
 
 (defn plan

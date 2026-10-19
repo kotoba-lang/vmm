@@ -100,8 +100,8 @@
         props (keep (fn [[k nm len]] (when (= k :prop) [nm len])) events)
         virtio-names (map #(str "virtio_mmio@" (hex %))
                           (map #(+ 167772160 (* % 512)) (range 32)))]
-    (is (= (into ["" "chosen" "memory@40000000" "cpus" "cpu" "psci" "intc"
-                  "timer" "pl011"]
+    (is (=        (into ["" "chosen" "memory@40000000" "cpus" "cpu" "psci" "intc"
+                  "timer" "apb-pclk" "pl011"]
                  virtio-names)
            (vec begins))
         "node order and unit-addresses follow the template")
@@ -109,6 +109,7 @@
                     ["interrupt-parent" 4]
                     ["bootargs" (+ 1 (count (:bootargs plan-map)))]
                     ["linux,initrd-start" 8] ["linux,initrd-end" 8]
+                    ["stdout-path" 7]
                     ["device_type" 7] ["reg" 16]
                     ["#address-cells" 4] ["#size-cells" 4]
                     ["device_type" 4] ["compatible" 11] ["reg" 4]
@@ -118,7 +119,10 @@
                     ["interrupt-controller" 0] ["reg" 32] ["phandle" 4]
                     ["#redistributor-regions" 4]
                     ["compatible" 32] ["always-on" 0] ["interrupts" 48]
-                    ["compatible" 10] ["reg" 16] ["interrupts" 12]]
+                    ["compatible" 12] ["#clock-cells" 4] ["clock-frequency" 4]
+                    ["phandle" 4]
+                    ["compatible" 24] ["clock-names" 17] ["clocks" 8]
+                    ["reg" 16] ["interrupts" 12]]
                    (apply concat
                           (repeat 32 [["compatible" 12] ["reg" 16]
                                       ["interrupts" 12]])))

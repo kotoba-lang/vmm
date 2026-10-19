@@ -7,7 +7,8 @@
             str-enable-method str-method str-interrupt-cells
             str-interrupt-controller            str-phandle str-interrupts
             str-always-on str-redistributor-regions
-            str-interrupt-parent
+            str-interrupt-parent str-clocks str-clock-names
+            str-clock-frequency str-clock-cells str-stdout-path
             hex-digits name-words
             struct-words-root struct-words-chosen struct-words-memory
             struct-words-cpus struct-words-cpu struct-words-psci
@@ -83,8 +84,13 @@
 (defn str-always-on [] :i64 177)        ;; "always-on\0"           10 bytes
 (defn str-redistributor-regions [] :i64 187) ;; "#redistributor-regions\0" 23 bytes
 (defn str-interrupt-parent [] :i64 210)  ;; "interrupt-parent\0"     17 bytes
+(defn str-clocks [] :i64 227)           ;; "clocks\0"                7 bytes
+(defn str-clock-names [] :i64 234)      ;; "clock-names\0"          12 bytes
+(defn str-clock-frequency [] :i64 246)  ;; "clock-frequency\0"      16 bytes
+(defn str-clock-cells [] :i64 262)      ;; "#clock-cells\0"         13 bytes
+(defn str-stdout-path [] :i64 275)      ;; "stdout-path\0"          12 bytes
 
-(defn size-dt-strings [] :i64 227)
+(defn size-dt-strings [] :i64 287)
 
 ;; ---------------------------------------------------------------------------
 ;; Name widths. A node name is NUL-terminated and padded to 4 bytes.
@@ -139,8 +145,9 @@
 
 (defn struct-words-chosen [bootargs-bytes :i64] :i64
   ;; BEGIN_NODE "chosen" (3) + bootargs prop (3 + value) + initrd-start
-  ;; (5) + initrd-end (5) + END_NODE (1).
-  (+ 17 (words-bootargs bootargs-bytes)))
+  ;; (5) + initrd-end (5) + stdout-path prop (7 bytes -> 2 value words -> 5)
+  ;; + END_NODE (1).
+  (+ 22 (words-bootargs bootargs-bytes)))
 
 (defn struct-words-memory [ram-base :i64] :i64
   ;; BEGIN_NODE "memory@<hex ram-base>": token + 7 + digits chars + NUL,
@@ -180,10 +187,21 @@
   ;; compatible list (dumpdtb-measured 2026-10-19).
   33)
 
-(defn struct-words-pl011 [] :i64
-  ;; BEGIN_NODE "pl011" (3) + compatible="arm,pl011" (6)
-  ;; + reg of two u64 (7) + interrupts (6) + END_NODE (1).
+(defn struct-words-apb-pclk [] :i64
+  ;; BEGIN_NODE "apb-pclk" (4) + compatible="fixed-clock" (6)
+  ;; + #clock-cells (4) + clock-frequency (4) + phandle (4) + END_NODE (1).
+  ;; The clock node is what lets the pl011 driver probe (measured
+  ;; 2026-10-19: without a clock provider -- or with its phandle undeclared,
+  ;; which is the same thing to the driver -- the console never binds and
+  ;; init's output vanishes).
   23)
+
+(defn struct-words-pl011 [] :i64
+  ;; BEGIN_NODE "pl011" (3) + compatible="arm,pl011\0arm,primecell\0" (9)
+  ;; + clock-names (17 bytes -> 5 value words -> 8) + clocks of two
+  ;; phandles (8 bytes -> 2 -> 5) + reg of two u64 (7) + interrupts (6)
+  ;; + END_NODE (1).
+  39)
 
 (defn struct-words-virtio [virtio-name-digits :i64] :i64
   ;; BEGIN_NODE "virtio_mmio@<hex>": token + 12 + digits chars + NUL,
@@ -203,6 +221,7 @@
      (struct-words-psci)
      (struct-words-intc)
      (struct-words-timer)
+     (struct-words-apb-pclk)
      (struct-words-pl011)
      (* virtio-count (struct-words-virtio virtio-name-digits))
      (struct-words-end)))

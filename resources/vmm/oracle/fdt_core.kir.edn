@@ -151,11 +151,41 @@
    :effects #{},
    :body 210,
    :param-types []}
-  {:name size-dt-strings,
+  {:name str-clocks,
    :params [],
    :result :i64,
    :effects #{},
    :body 227,
+   :param-types []}
+  {:name str-clock-names,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 234,
+   :param-types []}
+  {:name str-clock-frequency,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 246,
+   :param-types []}
+  {:name str-clock-cells,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 262,
+   :param-types []}
+  {:name str-stdout-path,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 275,
+   :param-types []}
+  {:name size-dt-strings,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 287,
    :param-types []}
   {:name name-words,
    :params [chars],
@@ -201,7 +231,7 @@
    :params [bootargs-bytes],
    :result :i64,
    :effects #{},
-   :body (+ 17 (words-bootargs bootargs-bytes)),
+   :body (+ 22 (words-bootargs bootargs-bytes)),
    :param-types [:i64]}
   {:name struct-words-memory,
    :params [ram-base],
@@ -239,11 +269,17 @@
    :effects #{},
    :body 33,
    :param-types []}
-  {:name struct-words-pl011,
+  {:name struct-words-apb-pclk,
    :params [],
    :result :i64,
    :effects #{},
    :body 23,
+   :param-types []}
+  {:name struct-words-pl011,
+   :params [],
+   :result :i64,
+   :effects #{},
+   :body 39,
    :param-types []}
   {:name struct-words-virtio,
    :params [virtio-name-digits],
@@ -271,6 +307,7 @@
     (struct-words-psci)
     (struct-words-intc)
     (struct-words-timer)
+    (struct-words-apb-pclk)
     (struct-words-pl011)
     (* virtio-count (struct-words-virtio virtio-name-digits))
     (struct-words-end)),
@@ -400,6 +437,11 @@
   str-always-on
   str-redistributor-regions
   str-interrupt-parent
+  str-clocks
+  str-clock-names
+  str-clock-frequency
+  str-clock-cells
+  str-stdout-path
   hex-digits
   name-words
   struct-words-root
