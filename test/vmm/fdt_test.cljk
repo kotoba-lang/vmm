@@ -101,7 +101,7 @@
         virtio-names (map #(str "virtio_mmio@" (hex %))
                           (map #(+ 167772160 (* % 512)) (range 32)))]
     (is (=        (into ["" "chosen" "memory@40000000" "cpus" "cpu" "psci" "intc"
-                  "timer" "apb-pclk" "pl011"]
+                  "timer" "apb-pclk" "pl011" "pl031@9010000"]
                  virtio-names)
            (vec begins))
         "node order and unit-addresses follow the template")
@@ -122,6 +122,8 @@
                     ["compatible" 12] ["#clock-cells" 4] ["clock-frequency" 4]
                     ["phandle" 4]
                     ["compatible" 24] ["clock-names" 17] ["clocks" 8]
+                    ["reg" 16] ["interrupts" 12]
+                    ["compatible" 24] ["clocks" 4] ["clock-names" 9]
                     ["reg" 16] ["interrupts" 12]]
                    (apply concat
                           (repeat 32 [["compatible" 12] ["reg" 16]

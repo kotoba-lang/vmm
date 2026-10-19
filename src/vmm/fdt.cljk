@@ -139,6 +139,13 @@
          (prop-bytes s-clks (into (be32 2) (be32 2)))
          (prop-bytes s-reg (into (be64 uart-base) (be64 uart-size)))
          (prop-bytes s-ints (into [] (mapcat be32 [0 1 4])))
+         end
+         (begin "pl031@9010000")
+         (prop-str s-comp "arm,pl031\u0000arm,primecell\u0000")
+         (prop-bytes s-clks (be32 2))
+         (prop-str s-cnames "apb_pclk\u0000")
+         (prop-bytes s-reg (into (be64 151060480) (be64 4096)))
+         (prop-bytes s-ints (into [] (mapcat be32 [0 4 4])))
          end]]
     (-> (reduce into [] nodes)
         (into (mapcat
