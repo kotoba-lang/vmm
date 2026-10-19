@@ -9,6 +9,7 @@
             str-always-on str-redistributor-regions
             str-interrupt-parent str-clocks str-clock-names
             str-clock-frequency str-clock-cells str-stdout-path
+            struct-words-pl031
             hex-digits name-words
             struct-words-root struct-words-chosen struct-words-memory
             struct-words-cpus struct-words-cpu struct-words-psci
@@ -203,6 +204,16 @@
   ;; + END_NODE (1).
   39)
 
+(defn struct-words-pl031 [ram-ignored :i64] :i64
+  ;; BEGIN_NODE "pl031@9010000" (13 chars -> token + 4 words = 5)
+  ;; + compatible="arm,pl031\0arm,primecell\0" (24 bytes -> 6 -> 9)
+  ;; + clocks of one phandle (4) + clock-names "apb_pclk\0" (9 bytes -> 3
+  ;; -> 6) + reg of two u64 (7) + interrupts (6) + END_NODE (1).
+  ;; The RTC is what gives the guest a clock: without it TLS validates
+  ;; against epoch and dies with 'certificate is not yet valid'
+  ;; (measured 2026-10-19 on the murakumo fetch probe).
+  38)
+
 (defn struct-words-virtio [virtio-name-digits :i64] :i64
   ;; BEGIN_NODE "virtio_mmio@<hex>": token + 12 + digits chars + NUL,
   ;; padded; compatible="virtio,mmio" (6) + reg of two u64 (7)
@@ -223,6 +234,7 @@
      (struct-words-timer)
      (struct-words-apb-pclk)
      (struct-words-pl011)
+     (struct-words-pl031 0)
      (* virtio-count (struct-words-virtio virtio-name-digits))
      (struct-words-end)))
 

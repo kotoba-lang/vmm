@@ -281,6 +281,12 @@
    :effects #{},
    :body 39,
    :param-types []}
+  {:name struct-words-pl031,
+   :params [ram-ignored],
+   :result :i64,
+   :effects #{},
+   :body 38,
+   :param-types [:i64]}
   {:name struct-words-virtio,
    :params [virtio-name-digits],
    :result :i64,
@@ -309,6 +315,7 @@
     (struct-words-timer)
     (struct-words-apb-pclk)
     (struct-words-pl011)
+    (struct-words-pl031 0)
     (* virtio-count (struct-words-virtio virtio-name-digits))
     (struct-words-end)),
    :param-types [:i64 :i64 :i64 :i64]}
@@ -442,6 +449,7 @@
   str-clock-frequency
   str-clock-cells
   str-stdout-path
+  struct-words-pl031
   hex-digits
   name-words
   struct-words-root
