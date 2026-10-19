@@ -236,7 +236,7 @@
    :effects #{},
    :body
    (if
-    (if (page-aligned? gpa) false true)
+    (= (page-aligned? gpa) 0)
     (result-err-of [:result :i64 :string] "tdvmcall/map-gpa-unaligned")
     (result-ok-of [:result :i64 :string] (tdx-tdvmcall-vgpi gpa))),
    :param-types [:i64]}
@@ -246,10 +246,10 @@
    :effects #{},
    :body
    (if
-    (if (page-aligned? gpa) false true)
+    (= (page-aligned? gpa) 0)
     (result-err-of [:result :i64 :string] "tdvmcall/map-gpa-unaligned")
     (if
-     (if (page-aligned? size) false true)
+     (= (page-aligned? size) 0)
      (result-err-of
       [:result :i64 :string]
       "tdvmcall/map-gpa-size-unaligned")
@@ -420,8 +420,10 @@
    :effects #{},
    :body
    (let
-    [known (snp-policy-known-mask)
-     required-one (snp-policy-reserved-one-bit)]
+    [known
+     (snp-policy-known-mask)
+     required-one
+     (snp-policy-reserved-one-bit)]
     (if
      (= policy (bit-and policy known))
      (if (= (bit-and policy required-one) required-one) 1 0)
@@ -536,7 +538,7 @@
   snp-get-report-req
   portio-verdict
   snp-policy-bounds],
- :schemas nil,
- :effects #{},
- :blocks [],
+ :schemas nil, 
+ :effects #{}, 
+ :blocks [], 
  :entry nil}

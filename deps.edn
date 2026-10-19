@@ -30,7 +30,7 @@
        org.clojure/clojure {:mvn/version "1.12.0"}
         io.github.kotoba-lang/osaho
         {:git/url "https://github.com/kotoba-lang/osaho.git"
-         :git/sha "6d08e3cffa09c003f8dbcdfaee964c4a1ea021ad"}}
+         :git/sha "502b5bac814ee4b9aec003d2520d23e0347680b8"}}
  :aliases
  {:test
   {:extra-paths ["test"]
@@ -41,11 +41,16 @@
                 ;; consumer in this workspace.
                 io.github.kotoba-lang/compiler
                 {:git/url "https://github.com/kotoba-lang/amu.git"
-                 :git/sha "1e21a1f56613d7d4c7628af1945ebf1cf7862ff3"}}
+                 :git/sha "bea7b9b24a44ebd3d5108e8e356a39c6bed5912d"}}
    :main-opts ["-m" "cognitect.test-runner"]}
 
   ;; Regenerate resources/vmm/oracle/*.kir.edn from kotoba/*_core.kotoba:
-  ;;   kbb -M:test:gen
-  ;; (a later alias's :main-opts wins; command-line -m would be appended to
-  ;; the test runner's instead of replacing it)
-  :gen {:main-opts ["-m" "vmm.oracle-gen"]}}}
+  ;;   kbb -M:gen
+  ;; (:gen carries its own :extra-paths/:extra-deps because kbb's test-runner
+  ;; substitution intercepts any alias set that names :test -- `kbb -M:test:gen`
+  ;; runs the tests, not this generator, measured 2026-10-19.)
+  :gen {:extra-paths ["test"]
+        :extra-deps {io.github.kotoba-lang/compiler
+                     {:git/url "https://github.com/kotoba-lang/amu.git"
+                      :git/sha "bea7b9b24a44ebd3d5108e8e356a39c6bed5912d"}}
+        :main-opts ["-m" "vmm.oracle-gen"]}}}

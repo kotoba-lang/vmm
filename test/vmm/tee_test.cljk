@@ -83,8 +83,10 @@
   ;; and the ABI version are otherwise clear.
   (is (:ok? (tee/snp-launch (assoc snp-good :policy 131072))))
   ;; A genuinely reserved bit outside the current policy layout is refused.
+  ;; Bit 25 (page-swap-disable) joined the layout in fdbd0c6; bit 26 is the
+  ;; first genuinely reserved one now.
   (is (= "snp/policy-bits-outside-mask"
-         (:reason (tee/snp-launch (assoc snp-good :policy (+ 131328 33554432)))))))
+         (:reason (tee/snp-launch (assoc snp-good :policy (+ 131328 67108864)))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Launch variant
@@ -301,12 +303,30 @@
   (is (= "snp/policy-bits-outside-mask"
          (:reason (tee/snp-launch (assoc snp-good :policy (+ 131072 67108864)))))))
 
+(defn- pow2
+  "2^n as a host number, width-safe.
+
+  `bit-shift-left` is 32-bit on the cljs side, so bits 32..63 silently wrap
+  into the low half (measured 2026-10-19) and a 'reserved high bit' test
+  exercises an in-mask bit instead. Powers of two are exact in a double up
+  to 2^1023, and every policy this builds stays within 2^63 + 2^17, so the
+  widening is exact on both runtimes."
+  [n]
+  (reduce * 1 (repeat n 2)))
+
 (deftest snp-policy-reserved-high-bits-refuse
   (doseq [bit [26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43
                44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63]]
     (is (= "snp/policy-bits-outside-mask"
            (:reason (tee/snp-launch
-                     (assoc snp-good :policy (+ 131072 (bit-shift-left 1 bit)))))))))
+                     (assoc snp-good :policy
+                            (if (= bit 63)
+                              ;; Bit 63 is the i64 sign bit: the word is
+                              ;; negative, and the interpreter refuses any
+                              ;; argument outside signed i64 (measured
+                              ;; "argument must be a signed i64", 2026-10-19).
+                              (- 131072 (pow2 63))
+                              (+ 131072 (pow2 bit))))))))))
 
 (deftest psc-reserved-gap-interior-stays-unknown
   ;; AMD 24593 table 65 codes 10..14 sit inside the reserved gap. Only the

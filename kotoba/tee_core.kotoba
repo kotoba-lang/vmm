@@ -158,7 +158,7 @@
 
 (defn tdx-tdvmcall-vgpi-res [gpa :i64] [:result :i64 :string]
   (cond
-    (not (page-aligned? gpa))
+    (= (page-aligned? gpa) 0)
     (result-err-of [:result :i64 :string] "tdvmcall/map-gpa-unaligned")
 
     :else
@@ -166,10 +166,10 @@
 
 (defn tdx-tdvmcall-map-gpa [gpa :i64 size :i64] [:result :i64 :string]
   (cond
-    (not (page-aligned? gpa))
+    (= (page-aligned? gpa) 0)
     (result-err-of [:result :i64 :string] "tdvmcall/map-gpa-unaligned")
 
-    (not (page-aligned? size))
+    (= (page-aligned? size) 0)
     (result-err-of [:result :i64 :string] "tdvmcall/map-gpa-size-unaligned")
 
     (<= size 0)

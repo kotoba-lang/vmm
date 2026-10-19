@@ -31,7 +31,7 @@ they are what lives here -- as `.kotoba`, compiled by amu, shipped as KIR.
 
 ```
 kotoba/*_core.kotoba          the authority. Decisions, no I/O
-  -> amu (kbb -M:test:gen)
+  -> amu (kbb -M:gen)
 resources/vmm/oracle/*.kir.edn  what ships
   -> kotoba.kir
 src/vmm/*.cljc                the call path. Threads values, decides nothing
@@ -49,7 +49,7 @@ longer matches its source.
 | arm64 Linux boot protocol -- Image header admission, 2 MiB base, DTB and initrd placement, `x0`/`pc` | **decided here**, 35 assertions |
 | MMIO exit classification -- PL011 and 32 virtio-mmio devices, offsets, access size, window straddling | **decided here**, 23 assertions |
 | PSCI function dispatch | **decided here** |
-| Devicetree (FDT) construction | **not here yet** -- the byte layout is the next core; nothing builds a blob today |
+| Devicetree (FDT) construction | **decided here** -- `fdt_core.kotoba` owns the layout (header, strings offsets, per-region word counts, hex unit-address widths, admissions) and `vmm.fdt/build` writes the blob; the gate (`fdt_test`) parses a built blob back with an independent DTSpec reader. Booting the blob into a guest: **not done** |
 | Virtqueue descriptor admission | **not here** -- `aiueos.virtio` owns it. Duplicating it would create the second copy this repository exists to avoid |
 | Booting an actual Linux kernel | **not done.** No call site in `aiueos.hvt` uses these cores yet, and nothing in this repository has been run against `/dev/kvm` |
 | x86_64, macOS/HVF | **not started.** ADR-0014 defers HVF to V2 behind the `com.apple.security.hypervisor` entitlement question |
@@ -88,7 +88,7 @@ widening what is admitted.
 
 ```bash
 kbb -M:test          # every test under test/vmm/
-kbb -M:test:gen      # regenerate resources/vmm/oracle/*.kir.edn from kotoba/
+kbb -M:gen           # regenerate resources/vmm/oracle/*.kir.edn from kotoba/
 ```
 
 `vmm.kir-freshness-test` recompiles every `kotoba/*_core.kotoba` and compares
